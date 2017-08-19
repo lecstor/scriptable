@@ -140,4 +140,4 @@ function TokenStream(input) {
   };
 }
 
-module.exports = TokenStream;
+export default TokenStream;

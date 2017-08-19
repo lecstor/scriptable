@@ -108,4 +108,4 @@ function evaluate(exp, env) {
   }
 }
 
-module.exports = evaluate;
+export default evaluate;

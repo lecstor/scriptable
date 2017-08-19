@@ -34,4 +34,4 @@ Environment.prototype = {
   }
 };
 
-module.exports = Environment;
+export default Environment;
