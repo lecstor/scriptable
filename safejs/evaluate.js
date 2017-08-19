@@ -1,7 +1,7 @@
 function makeLambda(env, exp) {
   return (...args) => {
-    var names = exp.vars;
-    var scope = env.extend();
+    const names = exp.vars;
+    const scope = env.extend();
     names.forEach((name, idx) => {
       scope.def(name, idx < args.length ? args[idx] : false);
     });
@@ -81,14 +81,14 @@ const evalOps = {
     return makeLambda(env, exp);
   },
   prog(exp, env) {
-    var val = false;
+    let val = false;
     exp.prog.forEach(function(exp) {
       val = evaluate(exp, env);
     });
     return val;
   },
   call(exp, env) {
-    var func = evaluate(exp.func, env);
+    const func = evaluate(exp.func, env);
     return func.apply(
       null,
       exp.args.map(function(arg) {
@@ -97,15 +97,15 @@ const evalOps = {
     );
   },
   if: (exp, env) => {
-    var cond = evaluate(exp.cond, env);
+    const cond = evaluate(exp.cond, env);
     if (cond !== false) {
       return evaluate(exp.then, env);
     }
     return exp.else ? evaluate(exp.else, env) : false;
   },
   forEach: (exp, env) => {
-    var list = evaluate(exp.list, env);
-    var feFunc = evaluate(exp.func, env);
+    const list = evaluate(exp.list, env);
+    const feFunc = evaluate(exp.func, env);
     list.forEach(feFunc);
     return true;
   },
