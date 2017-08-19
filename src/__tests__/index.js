@@ -1,4 +1,4 @@
-const run = require("../safejs");
+const run = require("../");
 
 describe("safejs", () => {
   it("runs", () => {
