@@ -87,6 +87,12 @@ function evaluate(exp, env) {
       }
       return exp.else ? evaluate(exp.else, env) : false;
 
+    case "forEach":
+      var list = evaluate(exp.list, env);
+      var feFunc = evaluate(exp.func, env);
+      list.forEach(feFunc);
+      return true;
+
     case "prog":
       var val = false;
       exp.prog.forEach(function(exp) {

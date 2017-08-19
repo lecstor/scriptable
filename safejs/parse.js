@@ -122,6 +122,13 @@ function parseIf(input) {
   return ret;
 }
 
+function parseForEach(input) {
+  skipKw(input, "forEach");
+  var [list, func] = delimited(input, "(", ")", ",", parseExpression);
+  var ret = { type: "forEach", list, func };
+  return ret;
+}
+
 function parseVarname(input) {
   var name = input.next();
   if (name.type !== "var") {
@@ -171,6 +178,9 @@ function parseAtom(input) {
     }
     if (isKw(input, "if")) {
       return parseIf(input);
+    }
+    if (isKw(input, "forEach")) {
+      return parseForEach(input);
     }
     if (isKw(input, "true") || isKw(input, "false")) {
       return parseBool(input);

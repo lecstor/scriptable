@@ -1,4 +1,4 @@
-const keywords = " if then else func true false";
+const keywords = " if then else func true false forEach ";
 
 function isKeyword(x) {
   return keywords.indexOf(" " + x + " ") >= 0;
