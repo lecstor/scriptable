@@ -1,13 +1,13 @@
 function makeLambda(env, exp) {
-  function lambda() {
+  return (...args) => {
     var names = exp.vars;
     var scope = env.extend();
-    for (var i = 0; i < names.length; ++i) {
-      scope.def(names[i], i < arguments.length ? arguments[i] : false);
-    }
-    return evaluate(exp.body, scope);
-  }
-  return lambda;
+    names.forEach((name, idx) => {
+      scope.def(name, idx < args.length ? args[idx] : false);
+    });
+    const result = evaluate(exp.body, scope);
+    return result;
+  };
 }
 
 function applyOp(op, a, b) {
