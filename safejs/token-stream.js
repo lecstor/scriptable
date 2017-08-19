@@ -1,4 +1,4 @@
-const keywords = " if then else lambda true false ";
+const keywords = " if then else func true false";
 
 function isKeyword(x) {
   return keywords.indexOf(" " + x + " ") >= 0;
@@ -9,11 +9,13 @@ function isDigit(ch) {
 }
 
 function isIdStart(ch) {
-  return /[a-zÎ»_]/i.test(ch);
+  // return /[a-zÎ»_]/i.test(ch);
+  return /[a-z]/i.test(ch);
 }
 
 function isId(ch) {
-  return isIdStart(ch) || "?!-<>=0123456789".indexOf(ch) >= 0;
+  // return isIdStart(ch) || "?!-<>=0123456789".indexOf(ch) >= 0;
+  return isIdStart(ch) || "0123456789".indexOf(ch) >= 0;
 }
 
 function isOpChar(ch) {

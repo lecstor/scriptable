@@ -175,7 +175,7 @@ function parseAtom(input) {
     if (isKw(input, "true") || isKw(input, "false")) {
       return parseBool(input);
     }
-    if (isKw(input, "lambda") || isKw(input, "Î»")) {
+    if (isKw(input, "func")) {
       input.next();
       return parseLambda(input);
     }
