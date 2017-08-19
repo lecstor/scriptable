@@ -28,4 +28,4 @@ function InputStream(input) {
   };
 }
 
-export default InputStream;
+module.exports = InputStream;

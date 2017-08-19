@@ -13,4 +13,4 @@ function numberFormatter(
   return new Intl.NumberFormat(locale, options).format;
 }
 
-export { log, numberFormatter };
+module.exports = { log, numberFormatter };

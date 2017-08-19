@@ -1,2 +1,1 @@
-require("@std/esm");
-module.exports = require("./safejs/index.mjs").default;
+module.exports = require("./safejs");

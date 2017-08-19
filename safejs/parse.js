@@ -215,4 +215,4 @@ function parse(input) {
   return { type: "prog", prog: prog };
 }
 
-export default parse;
+module.exports = parse;

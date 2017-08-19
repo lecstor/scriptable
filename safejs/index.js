@@ -1,16 +1,10 @@
 // http://lisperator.net/pltut/
 
-// const InputStream = require("./input-stream");
-// const TokenStream = require("./token-stream");
-// const Environment = require("./environment");
-// const parse = require("./parse");
-// const evaluate = require("./evaluate");
-
-import InputStream from "./input-stream";
-import TokenStream from "./token-stream";
-import Environment from "./environment";
-import parse from "./parse";
-import evaluate from "./evaluate";
+const InputStream = require("./input-stream");
+const TokenStream = require("./token-stream");
+const Environment = require("./environment");
+const parse = require("./parse");
+const evaluate = require("./evaluate");
 
 function run(code, props = {}) {
   var globalEnv = new Environment();
@@ -24,7 +18,7 @@ function run(code, props = {}) {
   return result;
 }
 
-export default run;
+module.exports = run;
 // module.exports = run;
 
 // var globalEnv = new Environment();
