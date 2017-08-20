@@ -150,7 +150,6 @@ function parseSum(input) {
   // sum takes a list
   var [list] = delimited(input, "(", ")", ",", parseExpression);
   var ret = { type: "sum", list };
-  console.log({ ret });
   return ret;
 }
 
