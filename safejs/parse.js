@@ -124,8 +124,17 @@ function parseIf(input) {
 
 function parseForEach(input) {
   skipKw(input, "forEach");
+  // forEach takes a list and function as args
   var [list, func] = delimited(input, "(", ")", ",", parseExpression);
   var ret = { type: "forEach", list, func };
+  return ret;
+}
+
+function parsePush(input) {
+  skipKw(input, "push");
+  // push takes a list and expression
+  var [list, value] = delimited(input, "(", ")", ",", parseExpression);
+  var ret = { type: "push", list, value };
   return ret;
 }
 
@@ -137,9 +146,9 @@ function parseVarname(input) {
   return name.value;
 }
 
-function parseLambda(input) {
+function parseFunc(input) {
   return {
-    type: "lambda",
+    type: "func",
     vars: delimited(input, "(", ")", ",", parseVarname),
     body: parseExpression(input)
   };
@@ -182,12 +191,15 @@ function parseAtom(input) {
     if (isKw(input, "forEach")) {
       return parseForEach(input);
     }
+    if (isKw(input, "push")) {
+      return parsePush(input);
+    }
     if (isKw(input, "true") || isKw(input, "false")) {
       return parseBool(input);
     }
     if (isKw(input, "func")) {
       input.next();
-      return parseLambda(input);
+      return parseFunc(input);
     }
     var tok = input.next();
     if (tok.type === "var" || tok.type === "num" || tok.type === "str") {
