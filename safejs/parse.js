@@ -15,41 +15,35 @@ const PRECEDENCE = {
   "%": 20
 };
 
+const PUNC = "punc";
+const KW = "kw";
+const OP = "op";
+
 const FALSE = { type: "bool", value: false };
 
-function isPunc(input, ch) {
+function isA(type, input, val) {
   var tok = input.peek();
-  return tok && tok.type === "punc" && (!ch || tok.value === ch) && tok;
-}
-
-function isKw(input, kw) {
-  var tok = input.peek();
-  return tok && tok.type === "kw" && (!kw || tok.value === kw) && tok;
-}
-
-function isOp(input, op) {
-  var tok = input.peek();
-  return tok && tok.type === "op" && (!op || tok.value === op) && tok;
+  return tok && tok.type === type && (!val || tok.value === val) && tok;
 }
 
 function skipPunc(input, ch) {
-  if (isPunc(input, ch)) {
+  if (isA(PUNC, input, ch)) {
     input.next();
   } else {
-    input.croak('Expecting punctuation: "' + ch + '"');
+    input.croak(`Expecting punctuation: "${ch}"`);
   }
 }
 
 function skipKw(input, kw) {
-  if (isKw(input, kw)) {
+  if (isA(KW, input, kw)) {
     input.next();
   } else {
-    input.croak('Expecting keyword: "' + kw + '"');
+    input.croak(`Expecting keyword: "${kw}"`);
   }
 }
 
 // function skip_op(op) {
-//   if (isOp(input, op)) {
+//   if (isA(OP, input, op)) {
 //     input.next();
 //   } else {
 //     input.croak('Expecting operator: "' + op + '"');
@@ -57,11 +51,11 @@ function skipKw(input, kw) {
 // }
 
 function unexpected(input) {
-  input.croak("Unexpected token: " + JSON.stringify(input.peek()));
+  input.croak(`Unexpected token: ${JSON.stringify(input.peek())}`);
 }
 
 function maybeBinary(input, left, myPrec) {
-  var tok = isOp(input);
+  var tok = isA(OP, input);
   if (tok) {
     var hisPrec = PRECEDENCE[tok.value];
     if (hisPrec > myPrec) {
@@ -86,7 +80,7 @@ function delimited(input, start, stop, separator, parser) {
   let first = true;
   skipPunc(input, start);
   while (!input.eof()) {
-    if (isPunc(input, stop)) {
+    if (isA(PUNC, input, stop)) {
       break;
     }
     if (first) {
@@ -94,7 +88,7 @@ function delimited(input, start, stop, separator, parser) {
     } else {
       skipPunc(input, separator);
     }
-    if (isPunc(input, stop)) {
+    if (isA(PUNC, input, stop)) {
       break;
     }
     a.push(parser(input));
@@ -106,7 +100,7 @@ function delimited(input, start, stop, separator, parser) {
 function parseIf(input) {
   skipKw(input, "if");
   var cond = parseExpression(input);
-  if (!isPunc(input, "{")) {
+  if (!isA(PUNC, input, "{")) {
     skipKw(input, "then");
   }
   var then = parseExpression(input);
@@ -115,7 +109,7 @@ function parseIf(input) {
     cond: cond,
     then: then
   };
-  if (isKw(input, "else")) {
+  if (isA(KW, input, "else")) {
     input.next();
     ret.else = parseExpression(input);
   }
@@ -124,7 +118,7 @@ function parseIf(input) {
 
 function isValidFunctionCall(input, functionName) {
   skipKw(input, functionName);
-  if (!isPunc(input, "(")) {
+  if (!isA(PUNC, input, "(")) {
     input.croak(`${functionName} is a reserved word (it's a function)`);
   }
 }
@@ -186,36 +180,36 @@ function parseCall(input, func) {
 
 function maybeCall(input, expr) {
   expr = expr();
-  return isPunc(input, "(") ? parseCall(input, expr) : expr;
+  return isA(PUNC, input, "(") ? parseCall(input, expr) : expr;
 }
 
 function parseAtom(input) {
   return maybeCall(input, function() {
-    if (isPunc(input, "(")) {
+    if (isA(PUNC, input, "(")) {
       input.next();
       var exp = parseExpression(input);
       skipPunc(input, ")");
       return exp;
     }
-    if (isPunc(input, "{")) {
+    if (isA(PUNC, input, "{")) {
       return parseProg(input);
     }
-    if (isKw(input, "if")) {
+    if (isA(KW, input, "if")) {
       return parseIf(input);
     }
-    if (isKw(input, "forEach")) {
+    if (isA(KW, input, "forEach")) {
       return parseForEach(input);
     }
-    if (isKw(input, "push")) {
+    if (isA(KW, input, "push")) {
       return parsePush(input);
     }
-    if (isKw(input, "sum")) {
+    if (isA(KW, input, "sum")) {
       return parseSum(input);
     }
-    if (isKw(input, "true") || isKw(input, "false")) {
+    if (isA(KW, input, "true") || isA(KW, input, "false")) {
       return parseBool(input);
     }
-    if (isKw(input, "func")) {
+    if (isA(KW, input, "func")) {
       input.next();
       return parseFunc(input);
     }
