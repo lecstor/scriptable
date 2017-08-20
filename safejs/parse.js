@@ -148,8 +148,8 @@ function parsePush(input) {
 function parseSum(input) {
   isValidFunctionCall(input, "sum");
   // sum takes a list
-  var [list] = delimited(input, "(", ")", ",", parseExpression);
-  var ret = { type: "sum", list };
+  var [list, prop] = delimited(input, "(", ")", ",", parseExpression);
+  var ret = { type: "sum", list, prop };
   return ret;
 }
 

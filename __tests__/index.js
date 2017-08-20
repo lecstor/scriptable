@@ -75,9 +75,16 @@ describe("safejs", () => {
     expect(env.list).toEqual([1, 2, 3, 4]);
   });
 
-  it("sum", () => {
+  it("sum - list of numbers", () => {
     const props = { list: [1, 2, 3] };
     const code = `sum(list);`;
+    const { result } = run(code, props);
+    expect(result).toEqual(6);
+  });
+
+  it("sum - prop from list of objects", () => {
+    const props = { list: [{ qty: 1 }, { qty: 2 }, { qty: 3 }] };
+    const code = `sum(list, "qty");`;
     const { result } = run(code, props);
     expect(result).toEqual(6);
   });

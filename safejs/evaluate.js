@@ -113,9 +113,9 @@ const evalOps = {
   },
   sum: (exp, env) => {
     const list = evaluate(exp.list, env);
+    const prop = exp.prop ? evaluate(exp.prop, env) : null;
     return list.reduce((total, item) => {
-      // const value = evaluate(item, env);
-      total += item;
+      total += prop ? item[prop] : item;
       return total;
     }, 0);
   },
