@@ -122,8 +122,15 @@ function parseIf(input) {
   return ret;
 }
 
+function isValidFunctionCall(input, functionName) {
+  skipKw(input, functionName);
+  if (!isPunc(input, "(")) {
+    input.croak(`${functionName} is a reserved word (it's a function)`);
+  }
+}
+
 function parseForEach(input) {
-  skipKw(input, "forEach");
+  isValidFunctionCall(input, "forEach");
   // forEach takes a list and function as args
   var [list, func] = delimited(input, "(", ")", ",", parseExpression);
   var ret = { type: "forEach", list, func };
@@ -131,10 +138,19 @@ function parseForEach(input) {
 }
 
 function parsePush(input) {
-  skipKw(input, "push");
+  isValidFunctionCall(input, "push");
   // push takes a list and expression
   var [list, value] = delimited(input, "(", ")", ",", parseExpression);
   var ret = { type: "push", list, value };
+  return ret;
+}
+
+function parseSum(input) {
+  isValidFunctionCall(input, "sum");
+  // sum takes a list
+  var [list] = delimited(input, "(", ")", ",", parseExpression);
+  var ret = { type: "sum", list };
+  console.log({ ret });
   return ret;
 }
 
@@ -193,6 +209,9 @@ function parseAtom(input) {
     }
     if (isKw(input, "push")) {
       return parsePush(input);
+    }
+    if (isKw(input, "sum")) {
+      return parseSum(input);
     }
     if (isKw(input, "true") || isKw(input, "false")) {
       return parseBool(input);

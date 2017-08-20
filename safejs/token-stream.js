@@ -1,4 +1,4 @@
-const keywords = " if then else func true false forEach push ";
+const keywords = " if then else func true false forEach push sum ";
 
 function isKeyword(x) {
   return keywords.indexOf(" " + x + " ") >= 0;

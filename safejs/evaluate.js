@@ -111,6 +111,14 @@ const evalOps = {
     list.push(value);
     return true;
   },
+  sum: (exp, env) => {
+    const list = evaluate(exp.list, env);
+    return list.reduce((total, item) => {
+      // const value = evaluate(item, env);
+      total += item;
+      return total;
+    }, 0);
+  },
   var: (exp, env) => {
     return env.get(exp.value);
   }
