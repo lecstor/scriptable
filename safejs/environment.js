@@ -1,5 +1,6 @@
 const has = require("lodash/has");
 const get = require("lodash/get");
+const set = require("lodash/set");
 
 function Environment(parent) {
   this.vars = Object.create(parent ? parent.vars : null);
@@ -32,14 +33,17 @@ Environment.prototype = {
     throw new Error("Undefined variable " + name);
   },
   set(name, value) {
-    var scope = this.lookup(name);
+    const baseName = name.replace(/^\..*/, "");
+    var scope = this.lookup(baseName);
     if (!scope && this.parent) {
       throw new Error("Undefined variable " + name);
     }
-    return ((scope || this).vars[name] = value);
+    set((scope || this).vars, name, value);
+    return value;
   },
   def(name, value) {
-    return (this.vars[name] = value);
+    set(this.vars, name, value);
+    return value;
   }
 };
 

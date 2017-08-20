@@ -53,12 +53,20 @@ describe("safejs", () => {
     expect(env.prop2).toEqual("goodbye");
   });
 
-  it("handles deep props", () => {
+  it("gets deep props", () => {
     const props = { prop1: { prop1b: "hello" } };
     const code = `prop2 = prop1.prop1b;`;
     const { result, env } = run(code, props);
     expect(result).toEqual("hello");
     expect(env.prop2).toEqual("hello");
+  });
+
+  it("sets deep props", () => {
+    const props = { prop1: { prop1b: "hello" } };
+    const code = `prop1.prop1b = "goodbye";`;
+    const { result, env } = run(code, props);
+    expect(result).toEqual("goodbye");
+    expect(env.prop1.prop1b).toEqual("goodbye");
   });
 
   it("handles functions in props", () => {
