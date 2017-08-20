@@ -16,7 +16,9 @@
   "scripts": {
     "test": "jest"
   },
-  "dependencies": {},
+  "dependencies": {
+    "lodash": "^4.17.4"
+  },
   "eslintConfig": {
     "extends": [
       "standard",

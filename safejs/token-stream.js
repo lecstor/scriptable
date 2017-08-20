@@ -13,11 +13,11 @@ function isIdStart(ch) {
 }
 
 function isId(ch) {
-  return isIdStart(ch) || "0123456789".indexOf(ch) >= 0;
+  return isIdStart(ch) || ".0123456789".indexOf(ch) >= 0;
 }
 
 function isOpChar(ch) {
-  return "+-*/%=&|<>!".indexOf(ch) >= 0;
+  return ".+-*/%=&|<>!".indexOf(ch) >= 0;
 }
 
 function isPunc(ch) {

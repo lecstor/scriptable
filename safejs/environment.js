@@ -1,3 +1,6 @@
+const has = require("lodash/has");
+const get = require("lodash/get");
+
 function Environment(parent) {
   this.vars = Object.create(parent ? parent.vars : null);
   this.parent = parent;
@@ -17,8 +20,14 @@ Environment.prototype = {
     }
   },
   get(name) {
+    // `in` includes inherited properties
     if (name in this.vars) {
       return this.vars[name];
+    }
+    // `has` does not include inherited properties
+    // but does handle "deep" properties
+    if (has(this.vars, name)) {
+      return get(this.vars, name);
     }
     throw new Error("Undefined variable " + name);
   },

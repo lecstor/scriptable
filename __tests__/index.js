@@ -53,6 +53,14 @@ describe("safejs", () => {
     expect(env.prop2).toEqual("goodbye");
   });
 
+  it("handles deep props", () => {
+    const props = { prop1: { prop1b: "hello" } };
+    const code = `prop2 = prop1.prop1b;`;
+    const { result, env } = run(code, props);
+    expect(result).toEqual("hello");
+    expect(env.prop2).toEqual("hello");
+  });
+
   it("handles functions in props", () => {
     const props = { myFunc: () => true };
     const code = `func1 = myFunc()`;
@@ -66,6 +74,20 @@ describe("safejs", () => {
     const code = `count = 0; forEach(list, func(num){ count = count + num;  })`;
     const { env } = run(code, props);
     expect(env.count).toBe(6);
+  });
+
+  it("nested forEach", () => {
+    const props = { list: [[1, 2, 3], [4, 5, 6]] };
+    const code = `
+      count = 0;
+      forEach(list, func(subList){
+        forEach(subList, func(num){
+          count = count + num;
+        });
+      })
+    `;
+    const { env } = run(code, props);
+    expect(env.count).toBe(21);
   });
 
   it("push", () => {
