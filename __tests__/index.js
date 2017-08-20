@@ -3,11 +3,82 @@ const run = require("../");
 describe("safejs", () => {
   it("runs", () => {
     const code = `
-      sum = lambda(x, y) x + y;
-      result = sum(21, 21);
+      mySum = func(x, y) x + y;
+      result = mySum(21, 21);
       `;
     const props = {};
-    const result = run(code, props);
+    const { result, env } = run(code, props);
     expect(result).toEqual(42);
+    expect(env.result).toEqual(42);
+    expect(env.mySum).toBeInstanceOf(Function);
+  });
+
+  it("runs func", () => {
+    const code = `
+      mySum = func(x, y) { x + y };
+      result = mySum(21, 21);
+      `;
+    const props = {};
+    const { result, env } = run(code, props);
+    expect(result).toEqual(42);
+    expect(env.result).toEqual(42);
+    expect(env.mySum).toBeInstanceOf(Function);
+  });
+
+  it("runs func", () => {
+    const code = `
+      mySum = func(x, y) { x + y };
+      result = mySum(21, 21);
+      `;
+    const props = {};
+    const { result, env } = run(code, props);
+    expect(result).toEqual(42);
+    expect(env.result).toEqual(42);
+    expect(env.mySum).toBeInstanceOf(Function);
+  });
+
+  it("has access to props", () => {
+    const code = `prop2 = prop1;`;
+    const props = { prop1: "hello" };
+    const { result, env } = run(code, props);
+    expect(result).toEqual("hello");
+    expect(env.prop2).toEqual("hello");
+  });
+
+  it("has access to props", () => {
+    const code = `if (prop1 == "hello") { prop2 = "goodbye" }`;
+    const props = { prop1: "hello" };
+    const { result, env } = run(code, props);
+    expect(result).toEqual("goodbye");
+    expect(env.prop2).toEqual("goodbye");
+  });
+
+  it("handles functions in props", () => {
+    const props = { myFunc: () => true };
+    const code = `func1 = myFunc()`;
+    const { env } = run(code, props);
+    expect(env.myFunc).toBeInstanceOf(Function);
+    expect(env.func1).toBe(true);
+  });
+
+  it("forEach", () => {
+    const props = { list: [1, 2, 3] };
+    const code = `count = 0; forEach(list, func(num){ count = count + num;  })`;
+    const { env } = run(code, props);
+    expect(env.count).toBe(6);
+  });
+
+  it("push", () => {
+    const props = { list: [1, 2, 3] };
+    const code = `push(list, 4)`;
+    const { env } = run(code, props);
+    expect(env.list).toEqual([1, 2, 3, 4]);
+  });
+
+  it("sum", () => {
+    const props = { list: [1, 2, 3] };
+    const code = `sum(list);`;
+    const { result } = run(code, props);
+    expect(result).toEqual(6);
   });
 });
