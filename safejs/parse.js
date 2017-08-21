@@ -54,27 +54,6 @@ function unexpected(input) {
   input.croak(`Unexpected token: ${JSON.stringify(input.peek())}`);
 }
 
-function maybeBinary(input, left, myPrec) {
-  var tok = isA(OP, input);
-  if (tok) {
-    var hisPrec = PRECEDENCE[tok.value];
-    if (hisPrec > myPrec) {
-      input.next();
-      return maybeBinary(
-        input,
-        {
-          type: tok.value === "=" ? "assign" : "binary",
-          operator: tok.value,
-          left: left,
-          right: maybeBinary(input, parseAtom(input), hisPrec)
-        },
-        myPrec
-      );
-    }
-  }
-  return left;
-}
-
 function delimited(input, start, stop, separator, parser) {
   let a = [];
   let first = true;
@@ -178,49 +157,6 @@ function parseCall(input, func) {
   };
 }
 
-function maybeCall(input, expr) {
-  expr = expr();
-  return isA(PUNC, input, "(") ? parseCall(input, expr) : expr;
-}
-
-function parseAtom(input) {
-  return maybeCall(input, function() {
-    if (isA(PUNC, input, "(")) {
-      input.next();
-      var exp = parseExpression(input);
-      skipPunc(input, ")");
-      return exp;
-    }
-    if (isA(PUNC, input, "{")) {
-      return parseProg(input);
-    }
-    if (isA(KW, input, "if")) {
-      return parseIf(input);
-    }
-    if (isA(KW, input, "forEach")) {
-      return parseForEach(input);
-    }
-    if (isA(KW, input, "push")) {
-      return parsePush(input);
-    }
-    if (isA(KW, input, "sum")) {
-      return parseSum(input);
-    }
-    if (isA(KW, input, "true") || isA(KW, input, "false")) {
-      return parseBool(input);
-    }
-    if (isA(KW, input, "func")) {
-      input.next();
-      return parseFunc(input);
-    }
-    var tok = input.next();
-    if (tok.type === "var" || tok.type === "num" || tok.type === "str") {
-      return tok;
-    }
-    unexpected(input);
-  });
-}
-
 function parseProg(input) {
   var prog = delimited(input, "{", "}", ";", parseExpression);
   if (prog.length === 0) {
@@ -232,10 +168,74 @@ function parseProg(input) {
   return { type: "prog", prog: prog };
 }
 
+function processAtom(input) {
+  if (isA(PUNC, input, "(")) {
+    input.next();
+    var exp = parseExpression(input);
+    skipPunc(input, ")");
+    return exp;
+  }
+  if (isA(PUNC, input, "{")) {
+    return parseProg(input);
+  }
+  if (isA(KW, input, "if")) {
+    return parseIf(input);
+  }
+  if (isA(KW, input, "forEach")) {
+    return parseForEach(input);
+  }
+  if (isA(KW, input, "push")) {
+    return parsePush(input);
+  }
+  if (isA(KW, input, "sum")) {
+    return parseSum(input);
+  }
+  if (isA(KW, input, "true") || isA(KW, input, "false")) {
+    return parseBool(input);
+  }
+  if (isA(KW, input, "func")) {
+    input.next();
+    return parseFunc(input);
+  }
+  var tok = input.next();
+  if (tok.type === "var" || tok.type === "num" || tok.type === "str") {
+    return tok;
+  }
+  unexpected(input);
+}
+
+function maybeCall(input, expr) {
+  expr = expr(input);
+  return isA(PUNC, input, "(") ? parseCall(input, expr) : expr;
+}
+
+function parseAtom(input) {
+  return maybeCall(input, processAtom);
+}
+
+function maybeBinary(input, left, myPrec) {
+  var tok = isA(OP, input);
+  if (tok) {
+    var hisPrec = PRECEDENCE[tok.value];
+    if (hisPrec > myPrec) {
+      input.next();
+      return maybeBinary(
+        input,
+        {
+          type: tok.value === "=" ? "assign" : "binary",
+          operator: tok.value,
+          left: left,
+          right: maybeBinary(input, parseAtom(input), hisPrec)
+        },
+        myPrec
+      );
+    }
+  }
+  return left;
+}
+
 function parseExpression(input) {
-  return maybeCall(input, function() {
-    return maybeBinary(input, parseAtom(input), 0);
-  });
+  return maybeCall(input, () => maybeBinary(input, parseAtom(input), 0));
 }
 
 function parse(input) {
