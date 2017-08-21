@@ -1,31 +1,41 @@
-const keywords = " if then else func true false forEach push sum ";
+const KEYWORDS = `
+if then else func true false
+forEach push sum
+`;
+const DIGITS = "01234567890";
+const ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const OP_CHAR = ".+-*/%=&|<>!";
+const PUNC = ",;(){}[]";
 
-function isKeyword(x) {
-  return keywords.indexOf(" " + x + " ") >= 0;
+function makeLookup(str, sep) {
+  const lookup = {};
+  str.split(sep).forEach(key => {
+    lookup[key] = true;
+  });
+  return lookup;
 }
 
-function isDigit(ch) {
-  return /[0-9]/i.test(ch);
-}
-
-function isIdStart(ch) {
-  return /[a-z]/i.test(ch);
-}
+const lookupKeyword = makeLookup(KEYWORDS, /\s/);
+const lookupDigits = makeLookup(DIGITS, "");
+const lookupIdStart = makeLookup(ALPHA, "");
+const lookupOpChar = makeLookup(OP_CHAR, "");
+const lookupPunc = makeLookup(PUNC, "");
+const lookupWs = {
+  " ": true,
+  "\n": true,
+  "\t": true
+};
 
 function isId(ch) {
-  return isIdStart(ch) || ".0123456789".indexOf(ch) >= 0;
+  return ch === "." || lookupIdStart[ch] || lookupDigits[ch];
 }
 
 function isOpChar(ch) {
-  return ".+-*/%=&|<>!".indexOf(ch) >= 0;
-}
-
-function isPunc(ch) {
-  return ",;(){}[]".indexOf(ch) >= 0;
+  return lookupOpChar[ch];
 }
 
 function isWhitespace(ch) {
-  return " \t\n".indexOf(ch) >= 0;
+  return lookupWs[ch];
 }
 
 function readWhile(input, predicate) {
@@ -46,7 +56,7 @@ function readNumber(input) {
       hasDot = true;
       return true;
     }
-    return isDigit(ch);
+    return lookupDigits[ch];
   });
   return { type: "num", value: parseFloat(number) };
 }
@@ -54,7 +64,7 @@ function readNumber(input) {
 function readIdent(input) {
   var id = readWhile(input, isId);
   return {
-    type: isKeyword(id) ? "kw" : "var",
+    type: lookupKeyword[id] ? "kw" : "var",
     value: id
   };
 }
@@ -101,19 +111,19 @@ function readNext(input) {
   if (ch === '"') {
     return readString(input);
   }
-  if (isDigit(ch)) {
+  if (lookupDigits[ch]) {
     return readNumber(input);
   }
-  if (isIdStart(ch)) {
+  if (lookupIdStart[ch]) {
     return readIdent(input);
   }
-  if (isPunc(ch)) {
+  if (lookupPunc[ch]) {
     return {
       type: "punc",
       value: input.next()
     };
   }
-  if (isOpChar(ch)) {
+  if (lookupOpChar[ch]) {
     return {
       type: "op",
       value: readWhile(input, isOpChar)
