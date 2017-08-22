@@ -12,5 +12,15 @@ module.exports = {
       total += prop ? item[prop] : item;
       return total;
     }, 0);
+  },
+  numberFormatter: args => {
+    const [
+      locale = "en-us",
+      options = {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }
+    ] = args;
+    return new Intl.NumberFormat(locale, options).format;
   }
 };
