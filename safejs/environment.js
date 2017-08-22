@@ -30,13 +30,13 @@ Environment.prototype = {
     if (has(this.vars, name)) {
       return get(this.vars, name);
     }
-    throw new Error("Undefined variable " + name);
+    throw new Error("Undefined variable (get) " + name);
   },
   set(name, value) {
-    const baseName = name.replace(/^\..*/, "");
+    const baseName = name.replace(/\..*/, "");
     var scope = this.lookup(baseName);
     if (!scope && this.parent) {
-      throw new Error("Undefined variable " + name);
+      throw new Error("Undefined variable (set) " + name);
     }
     set((scope || this).vars, name, value);
     return value;
