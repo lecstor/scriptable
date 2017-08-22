@@ -78,19 +78,14 @@ const evalOps = {
   },
   prog(exp, env) {
     let val = false;
-    exp.prog.forEach(function(exp) {
+    exp.prog.forEach(exp => {
       val = evaluate(exp, env);
     });
     return val;
   },
   call(exp, env) {
     const func = evaluate(exp.func, env);
-    return func.apply(
-      null,
-      exp.args.map(function(arg) {
-        return evaluate(arg, env);
-      })
-    );
+    return func.apply(null, exp.args.map(arg => evaluate(arg, env)));
   },
   if: (exp, env) => {
     const cond = evaluate(exp.cond, env);
@@ -100,20 +95,17 @@ const evalOps = {
     return exp.else ? evaluate(exp.else, env) : false;
   },
   forEach: (exp, env) => {
-    const list = evaluate(exp.list, env);
-    const feFunc = evaluate(exp.func, env);
-    list.forEach(feFunc);
+    const [list, fn] = exp.args.map(arg => evaluate(arg, env));
+    list.forEach(fn);
     return true;
   },
   push: (exp, env) => {
-    const list = evaluate(exp.list, env);
-    const value = evaluate(exp.value, env);
+    const [list, value] = exp.args.map(arg => evaluate(arg, env));
     list.push(value);
     return true;
   },
   sum: (exp, env) => {
-    const list = evaluate(exp.list, env);
-    const prop = exp.prop ? evaluate(exp.prop, env) : null;
+    const [list, prop] = exp.args.map(arg => evaluate(arg, env));
     return list.reduce((total, item) => {
       total += prop ? item[prop] : item;
       return total;
