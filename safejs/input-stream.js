@@ -23,7 +23,7 @@ function InputStream(input) {
     },
 
     croak(msg) {
-      throw new Error(msg + " (" + line + ":" + col + ")");
+      throw new Error(`${msg} (${line}:${col})`);
     }
   };
 }
