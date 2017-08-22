@@ -1,7 +1,6 @@
-const KEYWORDS = `
-if then else func true false
-forEach push sum
-`;
+const inbuiltFunctions = require("./inbuilt-functions");
+
+const KEYWORDS = `if then else func true false`;
 const DIGITS = "01234567890";
 const ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const OP_CHAR = ".+-*/%=&|<>!";
@@ -16,6 +15,9 @@ function makeLookup(str, sep) {
 }
 
 const lookupKeyword = makeLookup(KEYWORDS, /\s/);
+Object.keys(inbuiltFunctions).forEach(name => {
+  lookupKeyword[name] = true;
+});
 const lookupDigits = makeLookup(DIGITS, "");
 const lookupIdStart = makeLookup(ALPHA, "");
 const lookupOpChar = makeLookup(OP_CHAR, "");

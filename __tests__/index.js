@@ -118,4 +118,14 @@ describe("safejs", () => {
     const { result } = run(code, props);
     expect(result).toEqual(6);
   });
+
+  it("map", () => {
+    const props = { list: [{ qty: 1 }, { qty: 2 }, { qty: 3 }] };
+    const code = `
+newList = map(list, func(item){ item.qty = item.qty * 3; item });
+`;
+    const { result, env } = run(code, props);
+    expect(result).toEqual([{ qty: 3 }, { qty: 6 }, { qty: 9 }]);
+    expect(env.newList).toEqual([{ qty: 3 }, { qty: 6 }, { qty: 9 }]);
+  });
 });

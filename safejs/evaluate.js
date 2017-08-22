@@ -1,3 +1,5 @@
+const inbuiltFunctions = require("./inbuilt-functions");
+
 function applyOp(op, a, b) {
   function num(x) {
     if (typeof x !== "number") {
@@ -94,27 +96,17 @@ const evalOps = {
     }
     return exp.else ? evaluate(exp.else, env) : false;
   },
-  forEach: (exp, env) => {
-    const [list, fn] = exp.args.map(arg => evaluate(arg, env));
-    list.forEach(fn);
-    return true;
-  },
-  push: (exp, env) => {
-    const [list, value] = exp.args.map(arg => evaluate(arg, env));
-    list.push(value);
-    return true;
-  },
-  sum: (exp, env) => {
-    const [list, prop] = exp.args.map(arg => evaluate(arg, env));
-    return list.reduce((total, item) => {
-      total += prop ? item[prop] : item;
-      return total;
-    }, 0);
-  },
   var: (exp, env) => {
     return env.get(exp.value);
   }
 };
+
+Object.keys(inbuiltFunctions).forEach(name => {
+  evalOps[name] = (exp, env) => {
+    const args = exp.args.map(arg => evaluate(arg, env));
+    return inbuiltFunctions[name](args);
+  };
+});
 
 function evaluate(exp, env) {
   if (evalOps[exp.type]) {

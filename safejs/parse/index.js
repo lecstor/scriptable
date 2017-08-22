@@ -1,6 +1,6 @@
 const { skipKw, skipPunc } = require("./skip");
 const { isA } = require("./is-a");
-
+const inbuiltFunctions = require("../inbuilt-functions");
 const { PRECEDENCE, PUNC, KW, OP, FALSE } = require("../constants");
 const { delimited } = require("./args");
 
@@ -11,9 +11,8 @@ const keywordProcessors = {
   true: parseBool
 };
 
-// parse builtin functions into tokens with type and args
-const functions = ["forEach", "push", "sum"];
-functions.forEach(name => {
+// parse inbuilt functions into tokens with type and args
+Object.keys(inbuiltFunctions).forEach(name => {
   keywordProcessors[name] = input => {
     isValidFunctionCall(input, name);
     const args = delimited(input, "(", ")", ",", parseExpression);
@@ -76,7 +75,7 @@ function parseVarname(input) {
 function parseCall(input, func) {
   return {
     type: "call",
-    func: func,
+    func,
     args: delimited(input, "(", ")", ",", parseExpression)
   };
 }
