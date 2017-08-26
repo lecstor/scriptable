@@ -17,6 +17,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "babylon": "^6.18.0",
     "lodash": "^4.17.4"
   },
   "eslintConfig": {
