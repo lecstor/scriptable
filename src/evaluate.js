@@ -3,120 +3,128 @@ const forEach = require("lodash/forEach");
 
 const binaryOps = require("./binary-ops");
 const logicOps = require("./logic-ops");
-const inbuiltFuncs = require("./inbuilt-functions");
 
-function makeFunc(params, body) {
+const DEBUG = false;
+
+function makeFunc(params, body, functions) {
+  DEBUG && console.log({ params, body });
   return args => {
     let localEnv = {};
     args.forEach((arg, idx) => {
       localEnv[params[idx]] = arg;
     });
-    return evaluate(body, localEnv);
+    return evaluate(body, localEnv, functions);
   };
 }
 
 const evals = {
-  ArrowFunctionExpression(exp, env) {
+  ArrowFunctionExpression(exp, env, functions) {
     const params = exp.params.map(param => evaluate(param));
-    return makeFunc(params, exp.body);
+    DEBUG && console.log({ exp, env, params: exp.params });
+    return makeFunc(params, exp.body, functions);
   },
-  ArrayExpression(exp, env) {
-    return exp.elements.map(el => evaluate(el, env));
+  ArrayExpression(exp, env, functions) {
+    return exp.elements.map(el => evaluate(el, env, functions));
   },
-  AssignmentExpression(exp, env) {
-    // const target = evaluate(exp.left, env);
+  AssignmentExpression(exp, env, functions) {
     const target = exp.left.name;
-    set(env, target, evaluate(exp.right, env));
+    set(env, target, evaluate(exp.right, env, functions));
   },
-  BinaryExpression(exp, env) {
-    const left = evaluate(exp.left, env);
-    const right = evaluate(exp.right, env);
+  BinaryExpression(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
+    const left = evaluate(exp.left, env, functions);
+    const right = evaluate(exp.right, env, functions);
     return binaryOps[exp.operator](left, right);
   },
-  BlockStatement(exp, env) {
+  BlockStatement(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
     let result;
     forEach(exp.body, part => {
-      result = evaluate(part, env);
+      result = evaluate(part, env, functions);
       if (part.type === "ReturnStatement") {
         return false;
       }
     });
     return result;
   },
-  CallExpression(exp, env) {
+  CallExpression(exp, env, functions) {
     const func = evaluate(exp.callee);
-    const args = exp.arguments.map(arg => evaluate(arg, env));
-    if (inbuiltFuncs[func]) {
-      return inbuiltFuncs[func](args);
+    const args = exp.arguments.map(arg => evaluate(arg, env, functions));
+    DEBUG && console.log({ exp, env, func, args });
+    if (functions[func]) {
+      return functions[func](args);
     }
     return env[func](args);
   },
-  ExpressionStatement(exp, env) {
-    return evaluate(exp.expression, env);
+  ExpressionStatement(exp, env, functions) {
+    return evaluate(exp.expression, env, functions);
   },
-  File(exp, env) {
-    return evaluate(exp.program, env);
+  File(exp, env, functions) {
+    return evaluate(exp.program, env, functions);
   },
-  FunctionDeclaration(exp, env) {
+  FunctionDeclaration(exp, env, functions) {
     const name = evaluate(exp.id);
     const params = exp.params.map(param => evaluate(param));
-    env[name] = makeFunc(params, exp.body);
+    DEBUG && console.log({ exp, env, name, params });
+    env[name] = makeFunc(params, exp.body, functions);
   },
-  Identifier(exp, env) {
+  Identifier(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
     if (env) {
       return env[exp.name];
     }
     return exp.name;
   },
-  IfStatement(exp, env) {
-    const test = evaluate(exp.test, env);
+  IfStatement(exp, env, functions) {
+    const test = evaluate(exp.test, env, functions);
     if (test) {
-      return evaluate(exp.consequent, env);
+      return evaluate(exp.consequent, env, functions);
     }
   },
-  Literal(exp, env) {
+  Literal(exp) {
+    DEBUG && console.log({ exp });
     return exp.value;
   },
-  LogicalExpression(exp, env) {
-    const left = evaluate(exp.left, env);
-    const right = evaluate(exp.right, env);
+  LogicalExpression(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
+    const left = evaluate(exp.left, env, functions);
+    const right = evaluate(exp.right, env, functions);
     return logicOps[exp.operator](left, right);
   },
-  MemberExpression(exp, env) {
-    const obj = evaluate(exp.object, env);
-    const prop = evaluate(exp.property, obj);
-    // console.log({ obj, prop });
+  MemberExpression(exp, env, functions) {
+    const obj = evaluate(exp.object, env, functions);
+    const prop = evaluate(exp.property, obj, functions);
+    DEBUG && console.log({ exp, env, obj, prop });
     if (exp.computed) {
       return obj[prop];
     }
     return prop;
   },
-  ObjectExpression(exp, env) {
+  ObjectExpression(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
     return exp.properties.reduce((res, prop) => {
-      // res[evaluate(prop.key, env)] = evaluate(prop.value, env);
-      res[prop.key.name] = evaluate(prop.value, env);
+      res[prop.key.name] = evaluate(prop.value, env, functions);
       return res;
     }, {});
   },
-  Program(exp, env) {
+  Program(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
     // only return the result of the last "line"
     let result;
     exp.body.forEach(exp => {
-      result = evaluate(exp, env);
+      result = evaluate(exp, env, functions);
     });
     return result;
-    // return exp.body.map(exp => {
-    //   return evaluate(exp, env);
-    // });
   },
-  ReturnStatement(exp, env) {
-    return evaluate(exp.argument, env);
+  ReturnStatement(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
+    return evaluate(exp.argument, env, functions);
   }
 };
 
-function evaluate(exp, env) {
+function evaluate(exp, env, functions) {
   if (evals[exp.type]) {
-    return evals[exp.type](exp, env);
+    return evals[exp.type](exp, env, functions);
   }
   throw new Error("I don't know how to evaluate " + exp.type);
 }
