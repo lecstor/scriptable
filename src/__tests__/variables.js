@@ -1,4 +1,6 @@
-const run = require("../");
+const runner = require("../");
+
+const run = runner();
 
 const DEBUG = true;
 

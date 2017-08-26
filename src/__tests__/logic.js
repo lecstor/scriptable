@@ -1,4 +1,6 @@
-const run = require("../");
+const runner = require("../");
+
+const run = runner();
 
 const DEBUG = true;
 
@@ -34,6 +36,20 @@ describe("logic", () => {
       const env = { who: "Me" };
       const { result } = run(code, env);
       expect(result).toEqual("Me");
+    });
+  });
+  describe("&&", () => {
+    it("handles && - true", () => {
+      const code = `if (1 && 2) { thing = "true" }`;
+      const env = {};
+      run(code, env);
+      expect(env.thing).toEqual("true");
+    });
+    it("handles && - false", () => {
+      const code = `if (0 && 2) { thing = "true" }`;
+      const env = {};
+      run(code, env);
+      expect(env.thing).toBeUndefined();
     });
   });
 });

@@ -1,6 +1,8 @@
-const run = require("../");
+const runner = require("../");
 
 const DEBUG = true;
+
+const run = runner();
 
 describe("function", () => {
   it("defines a function", () => {
@@ -9,11 +11,7 @@ describe("function", () => {
       baz = foo(7);
       `;
     const env = {};
-    // const { result } = run(code, env);
     run(code, env);
-    // console.log(JSON.stringify({ env }, null, 2));
-    // console.log(env);
-    // console.log(`${env.foo}`);
     expect(env.foo).toBeDefined();
     expect(env.baz).toEqual(10);
   });
@@ -24,11 +22,8 @@ describe("function", () => {
       baz = foo(7);
       `;
     const env = {};
-    // const { result } = run(code, env);
+    const run = runner();
     run(code, env);
-    // console.log(JSON.stringify({ env }, null, 2));
-    // console.log(env);
-    // console.log(`${env.foo}`);
     expect(env.foo).toBeDefined();
     expect(env.baz).toEqual(10);
   });

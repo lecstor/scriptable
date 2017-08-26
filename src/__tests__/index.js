@@ -1,4 +1,6 @@
-const run = require("../");
+const runner = require("../");
+
+const run = runner();
 
 const DEBUG = true;
 
@@ -17,9 +19,10 @@ const code = `
   list = ["me", "myself"];
   push(list, "I");
 
-  greet = arrow(hello(who || "world"));
+  greet1 = hello(who || "world")
+  greet2 = arrow(hello(who || "world"));
 
-  greet
+  greet2
 `;
 
 describe("a program", () => {
@@ -28,7 +31,8 @@ describe("a program", () => {
     const { result } = run(code, env);
     expect(env.arrow).toBeInstanceOf(Function);
     expect(env.hello).toBeInstanceOf(Function);
-    expect(env.greet).toEqual("hello world =>");
+    expect(env.greet1).toEqual("hello world");
+    expect(env.greet2).toEqual("hello world =>");
     expect(result).toBeDefined();
     expect(result).toEqual("hello world =>");
   });

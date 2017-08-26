@@ -1,6 +1,8 @@
-const run = require("../");
+const runner = require("../");
 
 const DEBUG = true;
+
+const run = runner();
 
 describe("expressions", () => {
   it("6 + 3", () => {
