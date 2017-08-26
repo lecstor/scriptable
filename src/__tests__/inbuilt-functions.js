@@ -29,14 +29,14 @@ describe("inbuilt functions", () => {
   it("numberFormatter", () => {
     const code = `formatD = numberFormatter(); formatD(12340);`;
     const env = {};
-    const { result } = run(code, env, DEBUG);
+    const { result } = run(code, env);
     expect(result).toEqual("12,340");
   });
 
   it("formatDollars", () => {
     const code = `formatDollars(12340);`;
     const env = {};
-    const { result } = run(code, env, DEBUG);
+    const { result } = run(code, env);
     expect(result).toEqual("12,340.00");
   });
 });

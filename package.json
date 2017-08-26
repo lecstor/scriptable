@@ -1,7 +1,7 @@
 {
   "name": "docca-safejs",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "src/index.js",
   "license": "MIT",
   "devDependencies": {
     "eslint": "^4.4.1",
@@ -21,22 +21,13 @@
     "lodash": "^4.17.4"
   },
   "eslintConfig": {
-    "extends": [
-      "standard",
-      "prettier"
-    ],
+    "extends": ["standard", "prettier"],
     "env": {
       "jest": true
     },
     "rules": {
-      "curly": [
-        "error",
-        "all"
-      ],
-      "brace-style": [
-        "error",
-        "1tbs"
-      ],
+      "curly": ["error", "all"],
+      "brace-style": ["error", "1tbs"],
       "semi": [
         "error",
         "always",
@@ -47,10 +38,7 @@
     }
   },
   "jest": {
-    "moduleFileExtensions": [
-      "mjs",
-      "js"
-    ],
+    "moduleFileExtensions": ["mjs", "js"],
     "testEnvironment": "node",
     "verbose": true
   }
