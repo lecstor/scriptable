@@ -6,12 +6,12 @@ const logicOps = require("./logic-ops");
 
 const DEBUG = false;
 
-function makeFunc(params, body, functions) {
+function makeFunc(params, body, env, functions) {
   DEBUG && console.log({ params, body });
+  let localEnv = JSON.parse(JSON.stringify(env));
   return args => {
-    let localEnv = {};
-    args.forEach((arg, idx) => {
-      localEnv[params[idx]] = arg;
+    params.forEach((param, idx) => {
+      localEnv[param] = args[idx];
     });
     return evaluate(body, localEnv, functions);
   };
@@ -21,7 +21,7 @@ const evals = {
   ArrowFunctionExpression(exp, env, functions) {
     const params = exp.params.map(param => evaluate(param));
     DEBUG && console.log({ exp, env, params: exp.params });
-    return makeFunc(params, exp.body, functions);
+    return makeFunc(params, exp.body, env, functions);
   },
   ArrayExpression(exp, env, functions) {
     return exp.elements.map(el => evaluate(el, env, functions));
@@ -66,7 +66,7 @@ const evals = {
     const name = evaluate(exp.id);
     const params = exp.params.map(param => evaluate(param));
     DEBUG && console.log({ exp, env, name, params });
-    env[name] = makeFunc(params, exp.body, functions);
+    env[name] = makeFunc(params, exp.body, env, functions);
   },
   Identifier(exp, env, functions) {
     DEBUG && console.log({ exp, env });
