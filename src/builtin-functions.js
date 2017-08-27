@@ -18,9 +18,15 @@ const functions = {
     const [target, item] = args;
     target.push(item);
   },
+
   shift(args) {
     const [target] = args;
     return target.shift();
+  },
+
+  currentDate(args) {
+    const [tz] = args;
+    return moment().tz(tz || "UTC");
   },
 
   formatDate(args) {
