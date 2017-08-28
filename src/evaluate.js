@@ -54,6 +54,10 @@ const evals = {
     if (functions[func]) {
       return functions[func](args);
     }
+    if (!env[func]) {
+      const loc = exp.loc.start;
+      throw new Error(`${func} is not a function (${loc.line}:${loc.column})`);
+    }
     return env[func](args);
   },
   ExpressionStatement(exp, env, functions) {
@@ -126,7 +130,7 @@ function evaluate(exp, env, functions) {
   if (evals[exp.type]) {
     return evals[exp.type](exp, env, functions);
   }
-  throw new Error("I don't know how to evaluate " + exp.type);
+  throw new Error("Cannot evaluate " + exp.type);
 }
 
 module.exports = evaluate;
