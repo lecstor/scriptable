@@ -1,6 +1,6 @@
 {
   "name": "scriptable",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "src/index.js",
   "author": "jason@lecstor.com",
   "license": "MIT",
@@ -28,13 +28,22 @@
     "moment-timezone": "^0.5.13"
   },
   "eslintConfig": {
-    "extends": ["standard", "prettier"],
+    "extends": [
+      "standard",
+      "prettier"
+    ],
     "env": {
       "jest": true
     },
     "rules": {
-      "curly": ["error", "all"],
-      "brace-style": ["error", "1tbs"],
+      "curly": [
+        "error",
+        "all"
+      ],
+      "brace-style": [
+        "error",
+        "1tbs"
+      ],
       "semi": [
         "error",
         "always",
@@ -45,7 +54,10 @@
     }
   },
   "jest": {
-    "moduleFileExtensions": ["mjs", "js"],
+    "moduleFileExtensions": [
+      "mjs",
+      "js"
+    ],
     "testEnvironment": "node",
     "verbose": true
   }
