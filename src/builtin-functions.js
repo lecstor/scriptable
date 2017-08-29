@@ -9,27 +9,27 @@ const lodash = {
   string: require("lodash/string")
 };
 
-function numberFormatter(args) {
+function numberFormatter(...args) {
   return new Intl.NumberFormat(...args).format;
 }
 
 const functions = {
-  push(args) {
+  push(...args) {
     const [target, item] = args;
     target.push(item);
   },
 
-  shift(args) {
+  shift(...args) {
     const [target] = args;
     return target.shift();
   },
 
-  currentDate(args) {
+  currentDate(...args) {
     const [tz] = args;
     return moment().tz(tz || "UTC");
   },
 
-  formatDate(args) {
+  formatDate(...args) {
     const [dateString, format, timezone] = args;
     const date = moment.tz(
       /^\d+$/.test(dateString) ? +dateString : dateString,
@@ -40,19 +40,16 @@ const functions = {
 
   numberFormatter,
 
-  formatDollars: numberFormatter([
-    "en-us",
-    {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }
-  ])
+  formatDollars: numberFormatter("en-us", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
 };
 
 // add lodash functions..
 lodash.object.forIn(lodash, category => {
   lodash.object.forIn(category, (func, key) => {
-    functions[key] = args => {
+    functions[key] = (...args) => {
       return category[key](...args);
     };
   });

@@ -1,5 +1,6 @@
 const set = require("lodash/set");
 const forEach = require("lodash/forEach");
+const cloneDeep = require("lodash/cloneDeep");
 
 const binaryOps = require("./binary-ops");
 const logicOps = require("./logic-ops");
@@ -8,8 +9,8 @@ const DEBUG = false;
 
 function makeFunc(params, body, env, functions) {
   DEBUG && console.log({ params, body });
-  let localEnv = JSON.parse(JSON.stringify(env));
-  return args => {
+  let localEnv = cloneDeep(env);
+  return (...args) => {
     params.forEach((param, idx) => {
       localEnv[param] = args[idx];
     });
@@ -52,13 +53,13 @@ const evals = {
     const args = exp.arguments.map(arg => evaluate(arg, env, functions));
     DEBUG && console.log({ exp, env, func, args });
     if (functions[func]) {
-      return functions[func](args);
+      return functions[func](...args);
     }
     if (!env[func]) {
       const loc = exp.loc.start;
       throw new Error(`${func} is not a function (${loc.line}:${loc.column})`);
     }
-    return env[func](args);
+    return env[func](...args);
   },
   ExpressionStatement(exp, env, functions) {
     return evaluate(exp.expression, env, functions);

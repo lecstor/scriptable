@@ -32,8 +32,35 @@ describe("function", () => {
     const code = `
       Date = (date) => formatDate(date, "MMM D YYYY h:mma z", customer.tz);
       Date("2017-08-27T09:00:57.730+10:00");
-    `;
+      `;
     const { result } = run(code, { customer: { tz: "America/Los_Angeles" } });
     expect(result).toEqual("Aug 26 2017 4:00pm PDT");
+  });
+
+  it("can call a builtin with a function as arg", () => {
+    const code = `
+      nprices = map(prices, (price) => { price });
+    `;
+    const env = { prices: [11, 22, 33] };
+    run(code, env);
+    console.log({ env });
+    expect(env).toEqual({
+      prices: [11, 22, 33],
+      nprices: [11, 22, 33]
+    });
+  });
+
+  it("can call a builtin with a function as arg", () => {
+    const code = `
+      addTax = (price) => { return price + price / 10 };
+      incTax = map(prices, (price) => { return addTax(price) });
+      incTax2 = map(prices, (price) => addTax(price));
+      incTax3 = map(prices, addTax);
+      `;
+    const env = { prices: [10, 20, 30] };
+    run(code, env);
+    expect(env.incTax).toEqual([11, 22, 33]);
+    expect(env.incTax2).toEqual([11, 22, 33]);
+    expect(env.incTax3).toEqual([11, 22, 33]);
   });
 });
