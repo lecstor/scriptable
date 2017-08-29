@@ -63,4 +63,22 @@ describe("function", () => {
     expect(env.incTax2).toEqual([11, 22, 33]);
     expect(env.incTax3).toEqual([11, 22, 33]);
   });
+
+  it("can use an array as a function arg", () => {
+    const code = `
+      getLength = (list) => list.length;
+      getLength([1, 2, 3]);
+      `;
+    const { result } = run(code, {});
+    expect(result).toEqual(3);
+  });
+
+  it("can use an object as a function arg", () => {
+    const code = `
+      getLength = (obj) => keys(obj).length;
+      getLength({ one: 1, two: 2, three: 3 });
+      `;
+    const { result } = run(code, {});
+    expect(result).toEqual(3);
+  });
 });
