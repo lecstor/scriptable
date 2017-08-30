@@ -31,7 +31,7 @@ describe("try to get require", () => {
     );
   });
 
-  it("this.constructor.constructor", () => {
+  it("arguments.callee.caller", () => {
     // https://gist.github.com/bjoerge/2889278
     const code = `
       function getFunc () {
@@ -48,7 +48,7 @@ describe("try to get require", () => {
     // }
     // console.log(env.args);
     expect(() => run(code, env)).toThrow(
-      new Error("undefined is not a function (6:6)")
+      new Error("func.call is not a function (6:6)")
     );
   });
 });

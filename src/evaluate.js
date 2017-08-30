@@ -28,7 +28,7 @@ const evals = {
     return exp.elements.map(el => evaluate(el, env, functions));
   },
   AssignmentExpression(exp, env, functions) {
-    const target = exp.left.name;
+    const target = evaluate(exp.left);
     set(env, target, evaluate(exp.right, env, functions));
   },
   BinaryExpression(exp, env, functions) {
@@ -97,6 +97,11 @@ const evals = {
     return logicOps[exp.operator](left, right);
   },
   MemberExpression(exp, env, functions) {
+    if (!env) {
+      const obj = evaluate(exp.object);
+      const prop = evaluate(exp.property);
+      return `${obj}.${prop}`;
+    }
     const obj = evaluate(exp.object, env, functions);
     const prop = evaluate(exp.property, obj, functions);
     DEBUG && console.log({ exp, env, obj, prop });

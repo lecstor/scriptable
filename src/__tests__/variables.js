@@ -4,7 +4,7 @@ const run = runner();
 
 const DEBUG = true;
 
-describe("bare variables", () => {
+describe("bare variables eval", () => {
   it("evals a bare var", () => {
     const code = `foo`;
     const env = { foo: "bar" };
@@ -50,6 +50,42 @@ describe("bare variables", () => {
     const { result } = run(code, env);
     expect(result).toEqual("fiz");
     expect(env).toEqual({ foo: { bar: { baz: "fiz" } } });
+  });
+});
+
+describe("assignment", () => {
+  it("assigns top level var", () => {
+    const code = `foo = "bar"`;
+    const env = {};
+    run(code, env);
+    expect(env).toEqual({ foo: "bar" });
+  });
+  it("re-assigns third level var", () => {
+    const code = `foo.baz.fiz = "bar"`;
+    const env = { foo: { baz: { fiz: "b00" } } };
+    run(code, env);
+    expect(env).toEqual({ foo: { baz: { fiz: "bar" } } });
+  });
+
+  it("modifies var from inbuilt function", () => {
+    const code = `forEach(foo, bar => { bar.baz = 2 })`;
+    const env = { foo: [{ baz: 1 }, { baz: 1 }] };
+    run(code, env);
+    expect(env).toEqual({ foo: [{ baz: 2 }, { baz: 2 }] });
+  });
+
+  // these probably shouldn't actually work..
+  it("assigns second level var", () => {
+    const code = `foo.baz = "bar"`;
+    const env = {};
+    run(code, env);
+    expect(env).toEqual({ foo: { baz: "bar" } });
+  });
+  it("assigns third level var", () => {
+    const code = `foo.baz.fiz = "bar"`;
+    const env = {};
+    run(code, env);
+    expect(env).toEqual({ foo: { baz: { fiz: "bar" } } });
   });
 });
 
