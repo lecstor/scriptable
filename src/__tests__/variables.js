@@ -56,14 +56,14 @@ describe("bare variables eval", () => {
 describe("assignment", () => {
   it("assigns top level var", () => {
     const code = `foo = "bar"`;
-    const env = {};
-    run(code, env);
+    const vars = {};
+    const { env } = run(code, vars);
     expect(env).toEqual({ foo: "bar" });
   });
   it("re-assigns third level var", () => {
     const code = `foo.baz.fiz = "bar"`;
-    const env = { foo: { baz: { fiz: "b00" } } };
-    run(code, env);
+    const vars = { foo: { baz: { fiz: "b00" } } };
+    const { env } = run(code, vars);
     expect(env).toEqual({ foo: { baz: { fiz: "bar" } } });
   });
 
@@ -77,14 +77,14 @@ describe("assignment", () => {
   // these probably shouldn't actually work..
   it("assigns second level var", () => {
     const code = `foo.baz = "bar"`;
-    const env = {};
-    run(code, env);
+    const vars = {};
+    const { env } = run(code, vars);
     expect(env).toEqual({ foo: { baz: "bar" } });
   });
   it("assigns third level var", () => {
     const code = `foo.baz.fiz = "bar"`;
-    const env = {};
-    run(code, env);
+    const vars = {};
+    const { env } = run(code, vars);
     expect(env).toEqual({ foo: { baz: { fiz: "bar" } } });
   });
 });
@@ -92,17 +92,17 @@ describe("assignment", () => {
 describe("objects", () => {
   it("creates an object", () => {
     const code = `foo = { bar: "baz" };`;
-    const env = {};
-    const { result } = run(code, env);
-    expect(result).toBeUndefined();
+    const vars = {};
+    const { result, env } = run(code, vars);
+    expect(result).toEqual({ bar: "baz" });
     expect(env).toEqual({ foo: { bar: "baz" } });
   });
 
   it("creates an array", () => {
     const code = `foo = ["bar", "baz"];`;
-    const env = {};
-    const { result } = run(code, env);
-    expect(result).toBeUndefined();
+    const vars = {};
+    const { result, env } = run(code, vars);
+    expect(result).toEqual(["bar", "baz"]);
     expect(env).toEqual({ foo: ["bar", "baz"] });
   });
 });

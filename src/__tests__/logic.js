@@ -41,8 +41,8 @@ describe("logic", () => {
   describe("&&", () => {
     it("handles && - true", () => {
       const code = `if (1 && 2) { thing = "true" }`;
-      const env = {};
-      run(code, env);
+      const vars = {};
+      const { env } = run(code, vars);
       expect(env.thing).toEqual("true");
     });
     it("handles && - false", () => {

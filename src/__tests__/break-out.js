@@ -27,7 +27,7 @@ describe("try to get require", () => {
     `;
     const env = {};
     expect(() => run(code, env)).toThrow(
-      new TypeError("env[func] is not a function")
+      new TypeError("func2 is not a function (5:16)")
     );
   });
 
@@ -48,7 +48,7 @@ describe("try to get require", () => {
     // }
     // console.log(env.args);
     expect(() => run(code, env)).toThrow(
-      new Error("func.call is not a function (6:6)")
+      new Error(`"arguments" is undefined (3:15)`)
     );
   });
 });

@@ -18,6 +18,7 @@ const code = `
   list = ["me", "myself"];
   push(list, "I");
 
+  who = 0;
   greet1 = hello(who || "world");
 
   who = "Jason";
@@ -59,8 +60,8 @@ const code = `
 
 describe("docca-script", () => {
   it("runs a script", () => {
-    const env = {};
-    run(code, env);
+    const vars = {};
+    const { env } = run(code, vars);
 
     expect(env.arrow).toBeInstanceOf(Function);
     expect(env.hello).toBeInstanceOf(Function);

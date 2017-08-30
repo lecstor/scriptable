@@ -1,6 +1,6 @@
-const set = require("lodash/set");
+// const set = require("lodash/set");
 const forEach = require("lodash/forEach");
-const cloneDeep = require("lodash/cloneDeep");
+// const cloneDeep = require("lodash/cloneDeep");
 
 const binaryOps = require("./binary-ops");
 const logicOps = require("./logic-ops");
@@ -9,12 +9,13 @@ const DEBUG = false;
 
 function makeFunc(params, body, env, functions) {
   DEBUG && console.log({ params, body });
-  let localEnv = cloneDeep(env);
+  // let localEnv = cloneDeep(env);
+  const scope = env.extend();
   return (...args) => {
     params.forEach((param, idx) => {
-      localEnv[param] = args[idx];
+      scope.def(param, idx < args.length ? args[idx] : false);
     });
-    return evaluate(body, localEnv, functions);
+    return evaluate(body, scope, functions);
   };
 }
 
@@ -29,7 +30,7 @@ const evals = {
   },
   AssignmentExpression(exp, env, functions) {
     const target = evaluate(exp.left);
-    set(env, target, evaluate(exp.right, env, functions));
+    return env.set(target, evaluate(exp.right, env, functions), exp.loc.start);
   },
   BinaryExpression(exp, env, functions) {
     DEBUG && console.log({ exp, env });
@@ -55,11 +56,15 @@ const evals = {
     if (functions[func]) {
       return functions[func](...args);
     }
-    if (!env[func]) {
-      const loc = exp.loc.start;
-      throw new Error(`${func} is not a function (${loc.line}:${loc.column})`);
+
+    if (env.defined(func)) {
+      const customFunc = env.get(func, exp.loc.start);
+      if (typeof customFunc === "function") {
+        return customFunc(...args);
+      }
     }
-    return env[func](...args);
+    const loc = exp.loc.start;
+    throw new Error(`${func} is not a function (${loc.line}:${loc.column})`);
   },
   ExpressionStatement(exp, env, functions) {
     return evaluate(exp.expression, env, functions);
@@ -71,12 +76,12 @@ const evals = {
     const name = evaluate(exp.id);
     const params = exp.params.map(param => evaluate(param));
     DEBUG && console.log({ exp, env, name, params });
-    env[name] = makeFunc(params, exp.body, env, functions);
+    env.set(name, makeFunc(params, exp.body, env, functions), exp.loc.start);
   },
   Identifier(exp, env, functions) {
     DEBUG && console.log({ exp, env });
     if (env) {
-      return env[exp.name];
+      return env.get(exp.name, exp.loc.start);
     }
     return exp.name;
   },
@@ -103,12 +108,17 @@ const evals = {
       return `${obj}.${prop}`;
     }
     const obj = evaluate(exp.object, env, functions);
-    const prop = evaluate(exp.property, obj, functions);
-    DEBUG && console.log({ exp, env, obj, prop });
     if (exp.computed) {
+      const prop = evaluate(exp.property, env, functions);
       return obj[prop];
     }
-    return prop;
+    return obj[evaluate(exp.property)];
+    // const prop = evaluate(exp.property, obj, functions);
+    // DEBUG && console.log({ exp, env, obj, prop });
+    // if (exp.computed) {
+    //   return obj[prop];
+    // }
+    // return prop;
   },
   ObjectExpression(exp, env, functions) {
     DEBUG && console.log({ exp, env });

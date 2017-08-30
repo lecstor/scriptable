@@ -10,8 +10,8 @@ describe("function", () => {
       function foo(bar){ return bar + 3; }
       baz = foo(7);
       `;
-    const env = {};
-    run(code, env);
+    const vars = {};
+    const { env } = run(code, vars);
     expect(env.foo).toBeDefined();
     expect(env.baz).toEqual(10);
   });
@@ -21,9 +21,8 @@ describe("function", () => {
       foo = (bar) => { return bar + 3; }
       baz = foo(7);
       `;
-    const env = {};
-    const run = runner();
-    run(code, env);
+    const vars = {};
+    const { env } = run(code, vars);
     expect(env.foo).toBeDefined();
     expect(env.baz).toEqual(10);
   });
@@ -41,9 +40,8 @@ describe("function", () => {
     const code = `
       nprices = map(prices, (price) => { price });
     `;
-    const env = { prices: [11, 22, 33] };
-    run(code, env);
-    console.log({ env });
+    const vars = { prices: [11, 22, 33] };
+    const { env } = run(code, vars);
     expect(env).toEqual({
       prices: [11, 22, 33],
       nprices: [11, 22, 33]
@@ -57,8 +55,8 @@ describe("function", () => {
       incTax2 = map(prices, (price) => addTax(price));
       incTax3 = map(prices, addTax);
       `;
-    const env = { prices: [10, 20, 30] };
-    run(code, env);
+    const vars = { prices: [10, 20, 30] };
+    const { env } = run(code, vars);
     expect(env.incTax).toEqual([11, 22, 33]);
     expect(env.incTax2).toEqual([11, 22, 33]);
     expect(env.incTax3).toEqual([11, 22, 33]);
