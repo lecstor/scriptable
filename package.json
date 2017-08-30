@@ -1,6 +1,6 @@
 {
   "name": "scriptable",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "src/index.js",
   "author": "jason@lecstor.com",
   "license": "MIT",
