@@ -40,9 +40,10 @@ const evals = {
   },
   BlockStatement(exp, env, functions) {
     DEBUG && console.log({ exp, env });
+    const scope = env.extend();
     let result;
     forEach(exp.body, part => {
-      result = evaluate(part, env, functions);
+      result = evaluate(part, scope, functions);
       if (part.type === "ReturnStatement") {
         return false;
       }
@@ -139,6 +140,27 @@ const evals = {
   ReturnStatement(exp, env, functions) {
     DEBUG && console.log({ exp, env });
     return evaluate(exp.argument, env, functions);
+  },
+  VariableDeclaration(exp, env, functions) {
+    // exp.kind = var | let | const
+    DEBUG && console.log({ exp, env });
+    if (exp.kind === "var") {
+      // set in global scope
+      const globalScope = env.getGlobalScope();
+      exp.declarations.forEach(dec => {
+        evaluate(dec, globalScope, functions);
+      });
+      return;
+    }
+    exp.declarations.forEach(dec => {
+      evaluate(dec, env, functions);
+    });
+  },
+  VariableDeclarator(exp, env, functions) {
+    DEBUG && console.log({ exp, env });
+    const name = evaluate(exp.id);
+    const value = exp.init && evaluate(exp.init);
+    return env.def(name, value || undefined);
   }
 };
 

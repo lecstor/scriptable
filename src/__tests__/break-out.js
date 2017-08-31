@@ -48,7 +48,7 @@ describe("try to get require", () => {
     // }
     // console.log(env.args);
     expect(() => run(code, env)).toThrow(
-      new Error(`"arguments" is undefined (3:15)`)
+      new ReferenceError(`"arguments" is not defined (3:15)`)
     );
   });
 });
