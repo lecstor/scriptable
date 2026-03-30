@@ -1,5 +1,26 @@
+// Properties that could be used for prototype-chain traversal or pollution.
+// Defense-in-depth: also checked in evaluate.ts MemberExpression.
+const BLOCKED_PROPS = new Set([
+  "constructor",
+  "__proto__",
+  "prototype",
+  "__defineGetter__",
+  "__defineSetter__",
+  "__lookupGetter__",
+  "__lookupSetter__",
+]);
+
+function assertSafeParts(parts: string[]): void {
+  for (const part of parts) {
+    if (BLOCKED_PROPS.has(part)) {
+      throw new Error(`Access to property '${part}' is not allowed`);
+    }
+  }
+}
+
 function deepHas(obj: any, path: string): boolean {
   const parts = path.split(".");
+  assertSafeParts(parts);
   let current = obj;
   for (const part of parts) {
     if (current == null || typeof current !== "object") return false;
@@ -11,6 +32,7 @@ function deepHas(obj: any, path: string): boolean {
 
 function deepGet(obj: any, path: string): any {
   const parts = path.split(".");
+  assertSafeParts(parts);
   let current = obj;
   for (const part of parts) {
     if (current == null) return undefined;
@@ -21,6 +43,7 @@ function deepGet(obj: any, path: string): any {
 
 function deepSet(obj: any, path: string, value: any): void {
   const parts = path.split(".");
+  assertSafeParts(parts);
   let current = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     if (current[parts[i]] == null || typeof current[parts[i]] !== "object") {

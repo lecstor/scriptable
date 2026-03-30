@@ -6,6 +6,33 @@ import type { FunctionMap } from "./builtin-functions.js";
 
 type AnyNode = Node & Record<string, any>;
 
+// Properties that enable sandbox escape (prototype chain → Function constructor)
+// or prototype pollution. Blocked in both MemberExpression and deep path access.
+const BLOCKED_PROPS = new Set([
+  "constructor",
+  "__proto__",
+  "prototype",
+  "__defineGetter__",
+  "__defineSetter__",
+  "__lookupGetter__",
+  "__lookupSetter__",
+]);
+
+function assertSafeProperty(prop: string): void {
+  if (BLOCKED_PROPS.has(prop)) {
+    throw new Error(`Access to property '${prop}' is not allowed`);
+  }
+}
+
+// Execution step counter — reset via resetStepCounter() before each run.
+let _steps = 0;
+let _maxSteps = 0;
+
+export function resetStepCounter(maxSteps: number): void {
+  _steps = 0;
+  _maxSteps = maxSteps;
+}
+
 function loc(exp: AnyNode) {
   return exp.loc!.start;
 }
@@ -146,14 +173,18 @@ const evals: Record<
     if (!env) {
       const obj = evaluate(exp.object);
       const prop = evaluate(exp.property);
+      assertSafeProperty(prop);
       return `${obj}.${prop}`;
     }
     const obj = evaluate(exp.object, env, functions);
     if (exp.computed) {
       const prop = evaluate(exp.property, env, functions);
+      assertSafeProperty(String(prop));
       return obj[prop];
     }
-    return obj[evaluate(exp.property)];
+    const prop = evaluate(exp.property);
+    assertSafeProperty(prop);
+    return obj[prop];
   },
 
   ObjectExpression(exp, env, functions) {
@@ -232,6 +263,9 @@ const evals: Record<
 };
 
 function evaluate(exp: AnyNode, env?: any, functions?: any): any {
+  if (_maxSteps > 0 && ++_steps > _maxSteps) {
+    throw new Error("Execution limit exceeded");
+  }
   if (evals[exp.type]) {
     return evals[exp.type](exp, env, functions);
   }

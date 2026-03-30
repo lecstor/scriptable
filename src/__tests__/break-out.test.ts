@@ -23,7 +23,7 @@ describe("try to get require", () => {
     `;
     const env = {};
     expect(() => run(code, env)).toThrow(
-      "func2 is not a function (5:16)"
+      "Access to property 'constructor' is not allowed"
     );
   });
 
