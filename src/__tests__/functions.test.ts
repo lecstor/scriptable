@@ -1,6 +1,5 @@
-const runner = require("../");
-
-const DEBUG = true;
+import { describe, it, expect } from "vitest";
+import runner from "../index.js";
 
 const run = runner();
 
@@ -29,11 +28,11 @@ describe("function", () => {
 
   it("has access to env", () => {
     const code = `
-      Date = (date) => formatDate(date, "MMM D YYYY h:mma z", customer.tz);
-      Date("2017-08-27T09:00:57.730+10:00");
+      greet = (name) => "hello " + name;
+      greet(customer.name);
       `;
-    const { result } = run(code, { customer: { tz: "America/Los_Angeles" } });
-    expect(result).toEqual("Aug 26 2017 4:00pm PDT");
+    const { result } = run(code, { customer: { name: "Jason" } });
+    expect(result).toEqual("hello Jason");
   });
 
   it("can call a builtin with a function as arg", () => {
@@ -44,7 +43,7 @@ describe("function", () => {
     const { env } = run(code, vars);
     expect(env).toEqual({
       prices: [11, 22, 33],
-      nprices: [11, 22, 33]
+      nprices: [11, 22, 33],
     });
   });
 

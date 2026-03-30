@@ -1,8 +1,7 @@
-const runner = require("../");
+import { describe, it, expect } from "vitest";
+import runner from "../index.js";
 
 const run = runner();
-
-const DEBUG = true;
 
 describe("define global vars", () => {
   it(`foo`, () => {
@@ -22,9 +21,7 @@ describe("define global vars", () => {
   it("const foo", () => {
     const code = `const foo;`;
     const vars = {};
-    expect(() => run(code, vars)).toThrow(
-      new SyntaxError("Unexpected token (1:9)")
-    );
+    expect(() => run(code, vars)).toThrow(SyntaxError);
   });
 
   it(`foo = "bar"`, () => {

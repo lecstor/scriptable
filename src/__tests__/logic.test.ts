@@ -1,8 +1,7 @@
-const runner = require("../");
+import { describe, it, expect } from "vitest";
+import runner from "../index.js";
 
 const run = runner();
-
-const DEBUG = true;
 
 describe("logic", () => {
   describe("operators", () => {

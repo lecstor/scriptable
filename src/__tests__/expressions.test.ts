@@ -1,6 +1,5 @@
-const runner = require("../");
-
-const DEBUG = true;
+import { describe, it, expect } from "vitest";
+import runner from "../index.js";
 
 const run = runner();
 
