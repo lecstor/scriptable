@@ -1,0 +1,62 @@
+name: release
+
+# Publishes to npm via OIDC trusted publishing — no NPM_TOKEN secret.
+#
+# Triggered by pushing an annotated tag like `v0.1.1`. The local `pnpm release`
+# script handles versioning, committing, tagging, and pushing — the tag push
+# is what starts this workflow.
+#
+# If this workflow file is renamed, update the matching Trusted Publisher
+# config at https://www.npmjs.com/package/scriptable/access — the
+# "Workflow filename" field takes the basename only (e.g. `release.yml`).
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      # id-token: write is required for OIDC trusted publishing to npm.
+      # This lets `changeset publish` exchange a short-lived GitHub Actions
+      # token for an npm publish token — no long-lived NPM_TOKEN secret
+      # ever exists in this repo.
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10
+
+      # Node 24, NOT 22. npm trusted publishing requires npm >= 11.5.1, and
+      # Node 22 LTS is permanently stuck on npm 10.9.x.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      # --no-git-tag: the tag already exists (we pushed it from the
+      #   maintainer's laptop — that tag push is what triggered this
+      #   workflow), so skip changesets' tag creation step.
+      # NPM_CONFIG_PROVENANCE=true: stamps the package with an npm
+      #   provenance attestation so the npmjs.com page shows "Built
+      #   and signed on GitHub Actions".
+      - name: Publish to npm
+        run: pnpm exec changeset publish --no-git-tag
+        env:
+          NPM_CONFIG_PROVENANCE: "true"
