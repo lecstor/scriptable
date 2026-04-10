@@ -1,5 +1,11 @@
 # scriptable
 
+## 0.1.1
+
+### Patch Changes
+
+- e243ccb: Releases are now published from GitHub Actions via npm OIDC trusted publishing. Each published artifact carries an npm provenance attestation, and no `NPM_TOKEN` secret is stored anywhere.
+
 ## 0.1.0
 
 ### Minor Changes
