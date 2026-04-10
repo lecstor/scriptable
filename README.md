@@ -137,3 +137,49 @@ All tests ported to Vitest. The moment-dependent date tests now use `Intl.DateTi
 - ESM (`"type": "module"`) with TypeScript build
 - pnpm for package management
 - `exports` field with types
+
+## Contributing
+
+### Adding a changeset
+
+Every user-facing change needs a changeset so it appears in the CHANGELOG:
+
+```bash
+pnpm changeset       # interactive: pick patch/minor/major, write a summary
+git add .changeset   # commit the generated .changeset/*.md file with your PR
+```
+
+### Releasing
+
+```bash
+pnpm release
+```
+
+This runs the release script (`scripts/release.js`), which:
+
+1. Guards: clean tree, on `main`, up to date with `origin/main`, pending changesets exist.
+2. Runs tests and build as a safety gate.
+3. Consumes changesets to bump `package.json` and update `CHANGELOG.md`.
+4. Commits as `Version X.Y.Z` and shows the diff.
+5. Prompts for confirmation (last chance to abort).
+6. Pushes `main`, creates an annotated `vX.Y.Z` tag, and pushes the tag.
+7. The tag push triggers `.github/workflows/release.yml`, which publishes to npm via OIDC trusted publishing with provenance attestation. No `NPM_TOKEN` is involved.
+
+### Recovery: if the release workflow fails after the tag is pushed
+
+The version commit is on `main` and the tag is pushed, but npm publish failed. You can't rerun `pnpm release` because the changesets have already been consumed.
+
+```bash
+# 1. Delete the tag locally and on the remote
+git tag -d vX.Y.Z
+git push origin :refs/tags/vX.Y.Z
+
+# 2. Fix whatever broke, commit on main
+git commit -am "fix(ci): ..."
+git push origin main
+
+# 3. Re-tag HEAD (annotated!) and push to re-trigger the workflow.
+#    Same version number — this is a retry, not a new version.
+git tag -a vX.Y.Z -m "Version X.Y.Z"
+git push origin vX.Y.Z
+```
