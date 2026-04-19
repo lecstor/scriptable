@@ -28,6 +28,31 @@ function loc(exp: AnyNode) {
   return exp.loc!.start;
 }
 
+// Resolve an LHS or callee expression to its dotted env path. Used by
+// AssignmentExpression target and CallExpression callee. Unlike full
+// evaluation, this walks Identifier → name and stitches member accesses
+// into an env path string; but it *does* evaluate the key of a computed
+// member (`a[k]`) in the runtime env so the path reflects the actual
+// property being addressed — previously this used the identifier NAME
+// ("a.k") instead of the resolved key ("a.<value of k>").
+function evalAsPath(
+  exp: AnyNode,
+  env: Environment,
+  functions: FunctionMap
+): string {
+  if (exp.type === "Identifier") return exp.name;
+  if (exp.type === "Literal") return String(exp.value);
+  if (exp.type === "MemberExpression") {
+    const objPath = evalAsPath(exp.object, env, functions);
+    const propStr = exp.computed
+      ? String(evaluate(exp.property, env, functions))
+      : String((exp.property as AnyNode).name);
+    assertSafeProperty(propStr);
+    return `${objPath}.${propStr}`;
+  }
+  throw new Error("Cannot evaluate " + exp.type + " as assignment target");
+}
+
 function makeFunc(
   params: string[],
   body: AnyNode,
@@ -72,7 +97,7 @@ const evals: Record<
   },
 
   AssignmentExpression(exp, env, functions) {
-    const target = evaluate(exp.left);
+    const target = evalAsPath(exp.left, env, functions);
     return env.set(target, evaluate(exp.right, env, functions), loc(exp));
   },
 
@@ -95,7 +120,27 @@ const evals: Record<
   },
 
   CallExpression(exp, env, functions) {
-    const func = evaluate(exp.callee);
+    // Path-based resolution for static callees (Identifier / MemberExpression)
+    // lets us look up builtins in the `functions` map and dotted-path names in
+    // env. For dynamic callees (e.g. `f()()`, `(() => 1)()`), evaluate the
+    // callee as a value and call it directly if it's a function.
+    let fn: Function | undefined;
+    let name: string | undefined;
+    if (
+      exp.callee.type === "Identifier" ||
+      exp.callee.type === "MemberExpression"
+    ) {
+      name = evalAsPath(exp.callee, env, functions);
+      if (functions[name]) {
+        fn = functions[name];
+      } else if (env.defined(name)) {
+        const value = env.get(name, loc(exp));
+        if (typeof value === "function") fn = value;
+      }
+    } else {
+      const value = evaluate(exp.callee, env, functions);
+      if (typeof value === "function") fn = value;
+    }
 
     // Collect args, handling spread. Same V8 argument-stack consideration
     // as ArrayExpression — cap projected length and grow via a loop.
@@ -112,18 +157,11 @@ const evals: Record<
       }
     }
 
-    if (functions[func]) {
-      return functions[func](...args);
-    }
-
-    if (env.defined(func)) {
-      const customFunc = env.get(func, loc(exp));
-      if (typeof customFunc === "function") {
-        return customFunc(...args);
-      }
-    }
+    if (fn) return fn(...args);
     const l = loc(exp);
-    throw new Error(`${func} is not a function (${l.line}:${l.column})`);
+    throw new Error(
+      `${name ?? exp.callee.type} is not a function (${l.line}:${l.column})`
+    );
   },
 
   ConditionalExpression(exp, env, functions) {
@@ -171,12 +209,6 @@ const evals: Record<
   },
 
   MemberExpression(exp, env, functions) {
-    if (!env) {
-      const obj = evaluate(exp.object);
-      const prop = evaluate(exp.property);
-      assertSafeProperty(prop);
-      return `${obj}.${prop}`;
-    }
     const obj = evaluate(exp.object, env, functions);
     if (exp.computed) {
       const prop = evaluate(exp.property, env, functions);

@@ -489,6 +489,56 @@ describe("object literal: blocked keys", () => {
 });
 
 // ==========================================================================
+// 8f. Computed paths on LHS / callee evaluate the key's runtime value
+// ==========================================================================
+
+describe("computed paths: LHS and callee", () => {
+  it("computed assignment resolves key value, not identifier name", () => {
+    // Before the fix, `a[k] = v` wrote to `a.k` (using the identifier NAME).
+    // Post-fix, it writes to the property named by the *value* of k.
+    const code = `a = {}; k = "dynamic"; a[k] = 42; byValue = a.dynamic; byName = a.k;`;
+    const { env } = run(code);
+    expect(env.byValue).toEqual(42);
+    expect(env.byName).toBeUndefined();
+  });
+
+  it("computed assignment blocks blocked keys resolved at runtime", () => {
+    const code = `a = {}; k = "constructor"; a[k] = "pwn";`;
+    expect(() => run(code)).toThrow(
+      "Access to property 'constructor' is not allowed"
+    );
+  });
+
+  it("computed assignment blocks __proto__ resolved at runtime", () => {
+    const code = `a = {}; k = "__proto__"; a[k] = { bad: 1 };`;
+    expect(() => run(code)).toThrow(
+      "Access to property '__proto__' is not allowed"
+    );
+  });
+
+  it("nested computed assignment resolves keys at each level", () => {
+    const code = `a = { x: {} }; k = "inner"; a.x[k] = 7; result = a.x.inner;`;
+    const { env } = run(code);
+    expect(env.result).toEqual(7);
+  });
+
+  it("calls a returned function value (CallExpression callee)", () => {
+    const code = `
+      make = () => (x) => x + 1;
+      result = make()(41);
+    `;
+    const { env } = run(code);
+    expect(env.result).toEqual(42);
+  });
+
+  it("calls an IIFE arrow (ArrowFunctionExpression callee)", () => {
+    const code = `result = ((x) => x * 2)(21);`;
+    const { env } = run(code);
+    expect(env.result).toEqual(42);
+  });
+});
+
+// ==========================================================================
 // 9. Sandbox escape via builtin return values
 // ==========================================================================
 
