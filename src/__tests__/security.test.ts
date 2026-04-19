@@ -324,6 +324,82 @@ describe("DoS: step counter per-run isolation", () => {
 });
 
 // ==========================================================================
+// 8d. DoS — per-value allocation size
+// ==========================================================================
+
+describe("DoS: maxAllocSize", () => {
+  it("blocks exponential string doubling", () => {
+    // 26 doublings from 8 chars → ~512 MiB before this fix.
+    const code = `
+      s = "aaaaaaaa";
+      ${"s = s + s;\n".repeat(30)}
+      s.length;
+    `;
+    expect(() => run(code)).toThrow(/maxAllocSize/);
+  });
+
+  it("blocks exponential template literal growth", () => {
+    const code = `
+      s = "aaaaaaaa";
+      ${"s = `${s}${s}`;\n".repeat(30)}
+      s.length;
+    `;
+    expect(() => run(code)).toThrow(/maxAllocSize/);
+  });
+
+  it("blocks concat() builtin growth", () => {
+    const code = `
+      a = [1,2,3,4,5,6,7,8];
+      ${"a = concat(a, a);\n".repeat(25)}
+      a.length;
+    `;
+    expect(() => run(code)).toThrow(/maxAllocSize/);
+  });
+
+  it("blocks array spread growth", () => {
+    const code = `
+      a = [1,2,3,4,5,6,7,8];
+      b = [...a, ...a, ...a, ...a, ...a, ...a, ...a, ...a];
+      c = [...b, ...b, ...b, ...b, ...b, ...b, ...b, ...b];
+      d = [...c, ...c, ...c, ...c, ...c, ...c, ...c, ...c];
+      e = [...d, ...d, ...d, ...d, ...d, ...d, ...d, ...d];
+      f = [...e, ...e, ...e, ...e, ...e, ...e, ...e, ...e];
+      g = [...f, ...f, ...f, ...f, ...f, ...f, ...f, ...f];
+      g.length;
+    `;
+    expect(() => run(code)).toThrow(/maxAllocSize/);
+  });
+
+  it("allows disabling with 0", () => {
+    const unbounded = runner({ maxAllocSize: 0, maxSteps: 1_000_000, maxCodeSize: 0 });
+    const code = `
+      s = "aaaaaaaa";
+      s = s + s; s = s + s; s = s + s; s = s + s;
+      s.length;
+    `;
+    const { result } = unbounded(code);
+    expect(result).toBe(128);
+  });
+
+  it("respects a tight custom limit", () => {
+    const tight = runner({ maxAllocSize: 100 });
+    expect(() => tight(`a = "a"; a = a + a; a = a + a; a = a + a; a = a + a; a = a + a; a = a + a; a = a + a;`)).toThrow(
+      /maxAllocSize/
+    );
+  });
+
+  it("passes allocations within the default limit", () => {
+    const code = `
+      a = [1,2,3];
+      b = concat(a, a, a);
+      result = b.length;
+    `;
+    const { env } = run(code);
+    expect(env.result).toEqual(9);
+  });
+});
+
+// ==========================================================================
 // 8c. DoS — source size limit
 // ==========================================================================
 

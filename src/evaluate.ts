@@ -57,7 +57,13 @@ const evals: Record<
     for (const el of exp.elements) {
       if (el && el.type === "SpreadElement") {
         const spread = evaluate(el.argument, env, functions);
-        result.push(...spread);
+        // Check projected length before growing. push(...spread) hits V8's
+        // argument-stack limit (~65K) well below maxAllocSize, so enforce here
+        // and grow via a loop instead.
+        const addLen =
+          spread && typeof spread.length === "number" ? spread.length : 0;
+        env.runtime.checkLength(result.length + addLen);
+        for (const item of spread) result.push(item);
       } else if (el) {
         result.push(evaluate(el, env, functions));
       }
@@ -91,12 +97,16 @@ const evals: Record<
   CallExpression(exp, env, functions) {
     const func = evaluate(exp.callee);
 
-    // Collect args, handling spread
+    // Collect args, handling spread. Same V8 argument-stack consideration
+    // as ArrayExpression — cap projected length and grow via a loop.
     const args: any[] = [];
     for (const arg of exp.arguments) {
       if (arg.type === "SpreadElement") {
         const spread = evaluate(arg.argument, env, functions);
-        args.push(...spread);
+        const addLen =
+          spread && typeof spread.length === "number" ? spread.length : 0;
+        env.runtime.checkLength(args.length + addLen);
+        for (const item of spread) args.push(item);
       } else {
         args.push(evaluate(arg, env, functions));
       }
@@ -259,7 +269,12 @@ function evaluate(exp: AnyNode, env?: any, functions?: any): any {
   // branches don't execute user code, so the counter only needs to run here.
   if (env) env.runtime.step();
   if (evals[exp.type]) {
-    return evals[exp.type](exp, env, functions);
+    const result = evals[exp.type](exp, env, functions);
+    // checkSize inspects strings and arrays; other return types are no-ops.
+    // Covers both interpreter-built values (BinaryExpression +, TemplateLiteral,
+    // ArrayExpression) and builtin results (CallExpression).
+    if (env) env.runtime.checkSize(result);
+    return result;
   }
   throw new Error("Cannot evaluate " + exp.type);
 }

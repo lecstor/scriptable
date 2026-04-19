@@ -65,15 +65,51 @@ export interface Loc {
 export class Runtime {
   steps: number = 0;
   maxSteps: number;
+  maxAllocSize: number;
 
-  constructor(maxSteps: number = 0) {
+  constructor(maxSteps: number = 0, maxAllocSize: number = 0) {
     this.maxSteps = maxSteps;
+    this.maxAllocSize = maxAllocSize;
   }
 
   step(): void {
     if (this.maxSteps === 0) return;
     if (++this.steps > this.maxSteps) {
       throw new Error("Execution limit exceeded");
+    }
+  }
+
+  // String doubling and array spread/concat can grow exponentially in a handful
+  // of steps — 26 string doublings reach V8's ~512 MiB string-length ceiling in
+  // under a dozen statements. Check the size of every value produced by a
+  // handler so one run can't allocate unbounded memory.
+  checkSize(value: unknown): void {
+    if (this.maxAllocSize === 0) return;
+    if (typeof value === "string") {
+      if (value.length > this.maxAllocSize) {
+        throw new Error(
+          `String length ${value.length} exceeds maxAllocSize (${this.maxAllocSize})`
+        );
+      }
+    } else if (Array.isArray(value)) {
+      if (value.length > this.maxAllocSize) {
+        throw new Error(
+          `Array length ${value.length} exceeds maxAllocSize (${this.maxAllocSize})`
+        );
+      }
+    }
+  }
+
+  // Caller-projected length — used before growing an array via spread, so we
+  // reject the growth rather than wait for V8's per-call argument stack limit
+  // (which fires at ~65K args on push(...spread), a much lower ceiling than
+  // maxAllocSize is designed to enforce).
+  checkLength(projected: number): void {
+    if (this.maxAllocSize === 0) return;
+    if (projected > this.maxAllocSize) {
+      throw new Error(
+        `Length ${projected} exceeds maxAllocSize (${this.maxAllocSize})`
+      );
     }
   }
 }
