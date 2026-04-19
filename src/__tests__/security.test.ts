@@ -539,6 +539,57 @@ describe("computed paths: LHS and callee", () => {
 });
 
 // ==========================================================================
+// 8g. Recursive functions get fresh scope per invocation
+// ==========================================================================
+
+describe("function scope: per-invocation isolation", () => {
+  it("recursion preserves parent-frame params after child returns", () => {
+    // Before the fix, makeFunc hoisted `const scope = env.extend()` to
+    // closure-creation time, so every recursive call wrote into the same
+    // scope and clobbered the caller's `n`. The `[f(0), n][1]` shape forces a
+    // re-read of `n` AFTER the recursive call returns — with shared scope
+    // that read would see 0; with fresh per-invocation scope it sees 7.
+    const code = `
+      f = (n) => n == 0 ? 0 : [f(0), n][1];
+      result = f(7);
+    `;
+    const { env } = run(code);
+    expect(env.result).toEqual(7);
+  });
+
+  it("nested self-recursion keeps each frame's locals isolated", () => {
+    // Builds an array with each frame's n. Without per-invocation scope, every
+    // element would be the innermost value (0) because the shared scope was
+    // overwritten on the way down.
+    const code = `
+      f = (n) => n == 0 ? [n] : [f(n - 1), n];
+      result = f(3);
+      flat = JSON.stringify(result);
+    `;
+    const { env } = run(code, { JSON });
+    expect(env.flat).toEqual("[[[[0],1],2],3]");
+  });
+
+  it("recursive factorial yields correct result", () => {
+    const code = `
+      fact = (n) => n <= 1 ? 1 : n * fact(n - 1);
+      result = fact(5);
+    `;
+    const { env } = run(code);
+    expect(env.result).toEqual(120);
+  });
+
+  it("arrow-function recursion sums 1..n correctly", () => {
+    const code = `
+      sum = (n) => n == 0 ? 0 : n + sum(n - 1);
+      result = sum(4);
+    `;
+    const { env } = run(code);
+    expect(env.result).toEqual(10);
+  });
+});
+
+// ==========================================================================
 // 9. Sandbox escape via builtin return values
 // ==========================================================================
 

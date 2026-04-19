@@ -59,8 +59,12 @@ function makeFunc(
   env: Environment,
   functions: FunctionMap
 ) {
-  const scope = env.extend();
+  // Fresh scope per invocation — a scope hoisted to closure creation time was
+  // shared across every call, so recursion overwrote the caller's params and
+  // any let/const it had set on the function scope. `env` is the closure's
+  // captured lexical parent; extend it anew on every call.
   return (...args: any[]) => {
+    const scope = env.extend();
     params.forEach((param, idx) => {
       scope.def(param, idx < args.length ? args[idx] : false);
     });
