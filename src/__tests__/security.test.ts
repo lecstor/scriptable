@@ -324,6 +324,34 @@ describe("DoS: step counter per-run isolation", () => {
 });
 
 // ==========================================================================
+// 8c. DoS — source size limit
+// ==========================================================================
+
+describe("DoS: maxCodeSize", () => {
+  it("rejects input over the default limit", () => {
+    const huge = "x = 1;\n".repeat(20_000); // ~140 KB
+    expect(() => run(huge)).toThrow(/maxCodeSize/);
+  });
+
+  it("respects a custom limit", () => {
+    const tight = runner({ maxCodeSize: 10 });
+    expect(() => tight(`a = 1; b = 2; c = 3;`)).toThrow(/maxCodeSize/);
+  });
+
+  it("allows disabling with 0", () => {
+    const unbounded = runner({ maxCodeSize: 0, maxSteps: 1_000_000 });
+    const code = "x = 1;\n".repeat(10_000);
+    expect(() => unbounded(code)).not.toThrow();
+  });
+
+  it("passes code within the default limit", () => {
+    const code = `a = 1; b = 2; result = a + b;`;
+    const { env } = run(code);
+    expect(env.result).toEqual(3);
+  });
+});
+
+// ==========================================================================
 // 9. Sandbox escape via builtin return values
 // ==========================================================================
 
