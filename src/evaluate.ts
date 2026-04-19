@@ -24,6 +24,16 @@ function assertSafeProperty(prop: string): void {
   }
 }
 
+// Sentinel thrown by ReturnStatement and caught at the nearest function
+// boundary (makeFunc). Without this, a `return` nested inside an `if` (or
+// any non-ReturnStatement node) would be evaluated but the enclosing
+// BlockStatement would keep iterating the remaining statements — so
+// `function f(n) { if (n==0) return 1; f(0); return n; }` would fall
+// through to `f(0)` after the guarded return and recurse forever.
+class ReturnValue {
+  constructor(public value: any) {}
+}
+
 function loc(exp: AnyNode) {
   return exp.loc!.start;
 }
@@ -68,7 +78,12 @@ function makeFunc(
     params.forEach((param, idx) => {
       scope.def(param, idx < args.length ? args[idx] : false);
     });
-    return evaluate(body, scope, functions);
+    try {
+      return evaluate(body, scope, functions);
+    } catch (err) {
+      if (err instanceof ReturnValue) return err.value;
+      throw err;
+    }
   };
 }
 
@@ -116,9 +131,6 @@ const evals: Record<
     let result;
     for (const part of exp.body) {
       result = evaluate(part, scope, functions);
-      if (part.type === "ReturnStatement") {
-        break;
-      }
     }
     return result;
   },
@@ -273,7 +285,11 @@ const evals: Record<
   },
 
   ReturnStatement(exp, env, functions) {
-    return evaluate(exp.argument, env, functions);
+    // Throw a sentinel so control unwinds to the nearest function boundary
+    // regardless of which nested construct (if/block/etc.) contains the return.
+    throw new ReturnValue(
+      exp.argument ? evaluate(exp.argument, env, functions) : undefined
+    );
   },
 
   TemplateLiteral(exp, env, functions) {

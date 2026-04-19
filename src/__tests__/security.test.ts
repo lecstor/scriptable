@@ -590,6 +590,98 @@ describe("function scope: per-invocation isolation", () => {
 });
 
 // ==========================================================================
+// 8h. Nested returns unwind to the enclosing function boundary
+// ==========================================================================
+
+describe("control flow: nested returns", () => {
+  it("return inside if short-circuits the rest of the function body", () => {
+    // Pre-fix, BlockStatement only broke on a top-level ReturnStatement, so
+    // the `return 100` inside the guard's consequent did not stop the loop;
+    // the remaining `f(0)` / `return n` kept executing and, for f(n>0), the
+    // recursive f(0) call with the fixed per-invocation scope looped forever.
+    const code = `
+      function f(n) {
+        if (n == 0) return 100;
+        f(0);
+        return n;
+      }
+      result = f(3);
+    `;
+    const { env } = run(code);
+    expect(env.result).toEqual(3);
+  });
+
+  it("return inside nested if unwinds through both blocks", () => {
+    const code = `
+      function f(n) {
+        if (n > 0) {
+          if (n == 5) return "five";
+          return "other";
+        }
+        return "zero";
+      }
+      a = f(5);
+      b = f(3);
+      c = f(0);
+    `;
+    const { env } = run(code);
+    expect(env.a).toEqual("five");
+    expect(env.b).toEqual("other");
+    expect(env.c).toEqual("zero");
+  });
+
+  it("early return skips side effects later in the body", () => {
+    const code = `
+      count = 0;
+      function f(n) {
+        if (n > 0) return "early";
+        count = count + 1;
+        return "late";
+      }
+      a = f(1);
+      b = f(0);
+    `;
+    const { env } = run(code);
+    expect(env.a).toEqual("early");
+    expect(env.b).toEqual("late");
+    expect(env.count).toEqual(1);
+  });
+
+  it("return undefined (no argument) propagates undefined", () => {
+    const code = `
+      function f(n) {
+        if (n == 0) return;
+        return n * 2;
+      }
+      a = f(0);
+      b = f(3);
+    `;
+    const { env } = run(code);
+    expect(env.a).toBeUndefined();
+    expect(env.b).toEqual(6);
+  });
+
+  it("return from within nested function only unwinds the inner function", () => {
+    // Inner return must not escape past the inner function and stop the outer.
+    const code = `
+      function outer(n) {
+        inner = (x) => {
+          if (x > 0) return "inner";
+          return "zero";
+        };
+        tag = inner(n);
+        return tag + "-outer";
+      }
+      a = outer(1);
+      b = outer(0);
+    `;
+    const { env } = run(code);
+    expect(env.a).toEqual("inner-outer");
+    expect(env.b).toEqual("zero-outer");
+  });
+});
+
+// ==========================================================================
 // 9. Sandbox escape via builtin return values
 // ==========================================================================
 
