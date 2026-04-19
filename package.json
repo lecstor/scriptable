@@ -16,7 +16,11 @@
     "type": "git",
     "url": "https://github.com/lecstor/scriptable.git"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "prebuild": "rm -rf dist",
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
