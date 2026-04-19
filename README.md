@@ -49,6 +49,10 @@ The default `functions` include array/collection operations (`map`, `filter`, `r
 **`runner(options?)`** returns an executor function.
 
 - `options.functions` — `Record<string, Function>` of callable functions (defaults to built-in set)
+- `options.maxSteps` — AST nodes evaluated per run before throwing `Execution limit exceeded`. Defaults to `100_000`. Set to `0` to disable.
+- `options.maxCodeSize` — maximum source length in UTF-16 code units, checked before parsing. Defaults to `65_536` (64 KiB). Set to `0` to disable.
+- `options.maxAllocSize` — maximum length of any string or array produced during a run, and maximum key count of any object literal. Defaults to `1_000_000` (~2 MB for strings, 1M elements for arrays, 1M keys for objects). Set to `0` to disable.
+- `options.maxDurationMs` — wall-clock deadline per run, in milliseconds. Checked between interpreter steps, so a single long native builtin call (e.g. `sort` on a large array) can overshoot by up to its own duration before subsequent work is rejected. Defaults to `0` (disabled); set a positive value for hostile multi-tenant workloads.
 
 **`run(code, env?, debug?)`** executes code and returns `{ result, env }`.
 
@@ -56,6 +60,15 @@ The default `functions` include array/collection operations (`map`, `filter`, `r
 - `env` — initial variables available to the script (default `{}`)
 - `debug` — if truthy, logs the AST to console
 - Returns `result` (value of last expression) and `env` (all variables after execution)
+
+### Trust boundary
+
+The sandbox contains user code — it does **not** sanitize values or callables you inject. Anything you put in `env` or `options.functions` is trusted:
+
+- Passing a function (e.g. `Function`, `eval`, a host method that shells out) lets the script invoke it directly.
+- Passing an object with a getter runs that getter when the script reads the property.
+
+If you need to expose host capabilities, wrap them in plain functions that validate their inputs and return only primitives or plain objects.
 
 ## Supported syntax
 

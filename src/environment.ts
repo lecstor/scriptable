@@ -18,20 +18,24 @@ function assertSafeParts(parts: string[]): void {
   }
 }
 
-function deepHas(obj: any, path: string): boolean {
-  const parts = path.split(".");
+// First segment walks the scope chain (env.vars is Object.create(parent.vars))
+// so `obj.method()` still resolves when `obj` lives in an enclosing scope.
+// Subsequent segments use hasOwn to prevent user-land objects from leaking
+// Object.prototype members through the lookup (e.g. `obj.toString`).
+function deepHas(obj: any, parts: string[]): boolean {
   assertSafeParts(parts);
-  let current = obj;
-  for (const part of parts) {
+  if (parts.length === 0) return false;
+  if (!(parts[0] in obj)) return false;
+  let current = obj[parts[0]];
+  for (let i = 1; i < parts.length; i++) {
     if (current == null || typeof current !== "object") return false;
-    if (!Object.prototype.hasOwnProperty.call(current, part)) return false;
-    current = current[part];
+    if (!Object.prototype.hasOwnProperty.call(current, parts[i])) return false;
+    current = current[parts[i]];
   }
   return true;
 }
 
-function deepGet(obj: any, path: string): any {
-  const parts = path.split(".");
+function deepGet(obj: any, parts: string[]): any {
   assertSafeParts(parts);
   let current = obj;
   for (const part of parts) {
@@ -41,8 +45,7 @@ function deepGet(obj: any, path: string): any {
   return current;
 }
 
-function deepSet(obj: any, path: string, value: any): void {
-  const parts = path.split(".");
+function deepSet(obj: any, parts: string[], value: any): void {
   assertSafeParts(parts);
   let current = obj;
   for (let i = 0; i < parts.length - 1; i++) {
@@ -66,13 +69,28 @@ export class Runtime {
   steps: number = 0;
   maxSteps: number;
   maxAllocSize: number;
+  // Absolute deadline in ms (Date.now()). 0 means "no deadline".
+  deadline: number;
 
-  constructor(maxSteps: number = 0, maxAllocSize: number = 0) {
+  constructor(
+    maxSteps: number = 0,
+    maxAllocSize: number = 0,
+    maxDurationMs: number = 0
+  ) {
     this.maxSteps = maxSteps;
     this.maxAllocSize = maxAllocSize;
+    this.deadline = maxDurationMs > 0 ? Date.now() + maxDurationMs : 0;
   }
 
   step(): void {
+    // Wall-clock deadline guards against hostile workloads where a single
+    // native builtin call (e.g. sort on a 1M-element array) burns CPU without
+    // advancing the step counter. Checked between interpreter steps — a single
+    // long native call can overshoot the deadline by up to that call's
+    // duration, but subsequent work is rejected.
+    if (this.deadline && Date.now() > this.deadline) {
+      throw new Error("Execution time exceeded");
+    }
     if (this.maxSteps === 0) return;
     if (++this.steps > this.maxSteps) {
       throw new Error("Execution limit exceeded");
@@ -148,42 +166,27 @@ export default class Environment {
     return scope;
   }
 
-  defined(name: string): boolean {
-    if (name in this.vars) {
-      return true;
-    }
-    if (deepHas(this.vars, name)) {
-      return true;
-    }
-    return false;
+  defined(path: string[]): boolean {
+    return deepHas(this.vars, path);
   }
 
-  get(name: string, loc: Loc): any {
-    if (name in this.vars) {
-      return this.vars[name];
-    }
-    if (deepHas(this.vars, name)) {
-      return deepGet(this.vars, name);
+  get(path: string[], loc: Loc): any {
+    if (deepHas(this.vars, path)) {
+      return deepGet(this.vars, path);
     }
     throw new ReferenceError(
-      `"${name}" is not defined (${loc.line}:${loc.column})`
+      `"${path.join(".")}" is not defined (${loc.line}:${loc.column})`
     );
   }
 
-  set(name: string, value: any, loc: Loc): any {
-    const baseName = name.replace(/\..*/, "");
-    const scope = this.lookup(baseName);
-    if (!scope && this.parent) {
-      throw new ReferenceError(
-        `"${name}" is not defined (${loc.line}:${loc.column})`
-      );
-    }
-    deepSet((scope || this).vars, name, value);
+  set(path: string[], value: any, loc: Loc): any {
+    const scope = this.lookup(path[0]);
+    deepSet(scope.vars, path, value);
     return value;
   }
 
-  def(name: string, value: any): any {
-    deepSet(this.vars, name, value);
+  def(path: string[], value: any): any {
+    deepSet(this.vars, path, value);
     return value;
   }
 }

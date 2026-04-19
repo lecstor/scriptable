@@ -1,6 +1,5 @@
 import type { Node } from "acorn";
 import binaryOps from "./binary-ops.js";
-import logicOps from "./logic-ops.js";
 import type Environment from "./environment.js";
 import type { FunctionMap } from "./builtin-functions.js";
 
@@ -38,27 +37,28 @@ function loc(exp: AnyNode) {
   return exp.loc!.start;
 }
 
-// Resolve an LHS or callee expression to its dotted env path. Used by
+// Resolve an LHS or callee expression to an array of path segments. Used by
 // AssignmentExpression target and CallExpression callee. Unlike full
-// evaluation, this walks Identifier → name and stitches member accesses
-// into an env path string; but it *does* evaluate the key of a computed
-// member (`a[k]`) in the runtime env so the path reflects the actual
-// property being addressed — previously this used the identifier NAME
-// ("a.k") instead of the resolved key ("a.<value of k>").
+// evaluation, this walks Identifier → name and stitches member accesses into
+// a segment list; but it *does* evaluate the key of a computed member
+// (`a[k]`) in the runtime env so the path reflects the actual property being
+// addressed. Returning segments (not a dotted string) keeps dot-containing
+// keys like `a["x.y"]` as a single segment — a dotted string would be
+// re-split on the way through deepSet and write to `a.x.y` instead.
 function evalAsPath(
   exp: AnyNode,
   env: Environment,
   functions: FunctionMap
-): string {
-  if (exp.type === "Identifier") return exp.name;
-  if (exp.type === "Literal") return String(exp.value);
+): string[] {
+  if (exp.type === "Identifier") return [exp.name];
+  if (exp.type === "Literal") return [String(exp.value)];
   if (exp.type === "MemberExpression") {
-    const objPath = evalAsPath(exp.object, env, functions);
+    const objParts = evalAsPath(exp.object, env, functions);
     const propStr = exp.computed
       ? String(evaluate(exp.property, env, functions))
       : String((exp.property as AnyNode).name);
     assertSafeProperty(propStr);
-    return `${objPath}.${propStr}`;
+    return [...objParts, propStr];
   }
   throw new Error("Cannot evaluate " + exp.type + " as assignment target");
 }
@@ -76,7 +76,7 @@ function makeFunc(
   return (...args: any[]) => {
     const scope = env.extend();
     params.forEach((param, idx) => {
-      scope.def(param, idx < args.length ? args[idx] : false);
+      scope.def([param], idx < args.length ? args[idx] : false);
     });
     try {
       return evaluate(body, scope, functions);
@@ -116,8 +116,31 @@ const evals: Record<
   },
 
   AssignmentExpression(exp, env, functions) {
+    // Previously the operator was ignored, so `a += 1` silently behaved as
+    // `a = 1`. Compound ops now read the current value, combine with the rhs
+    // via the matching binary op, and write back. Logical compounds
+    // (`||=`, `&&=`, `??=`) short-circuit: rhs is only evaluated and written
+    // when the gate condition holds.
     const target = evalAsPath(exp.left, env, functions);
-    return env.set(target, evaluate(exp.right, env, functions), loc(exp));
+    if (exp.operator === "=") {
+      return env.set(target, evaluate(exp.right, env, functions), loc(exp));
+    }
+    const current = env.get(target, loc(exp));
+    if (exp.operator === "||=") {
+      return current || env.set(target, evaluate(exp.right, env, functions), loc(exp));
+    }
+    if (exp.operator === "&&=") {
+      return current && env.set(target, evaluate(exp.right, env, functions), loc(exp));
+    }
+    if (exp.operator === "??=") {
+      return current ?? env.set(target, evaluate(exp.right, env, functions), loc(exp));
+    }
+    const op = exp.operator.slice(0, -1);
+    if (!binaryOps[op]) {
+      throw new Error(`Unsupported assignment operator: ${exp.operator}`);
+    }
+    const rhs = evaluate(exp.right, env, functions);
+    return env.set(target, binaryOps[op](current, rhs), loc(exp));
   },
 
   BinaryExpression(exp, env, functions) {
@@ -146,11 +169,18 @@ const evals: Record<
       exp.callee.type === "Identifier" ||
       exp.callee.type === "MemberExpression"
     ) {
-      name = evalAsPath(exp.callee, env, functions);
-      if (functions[name]) {
+      const path = evalAsPath(exp.callee, env, functions);
+      name = path.join(".");
+      // hasOwn, not `functions[name]`: a plain-object `functions` map inherits
+      // from Object.prototype, so `functions["constructor"]` would resolve to
+      // `Object`, `functions["toString"]` to `Object.prototype.toString`, etc.
+      // Not directly exploitable today (returned wrappers can't reach blocked
+      // props) but a foot-gun the moment a builtin shares a name with an
+      // Object.prototype member.
+      if (Object.prototype.hasOwnProperty.call(functions, name)) {
         fn = functions[name];
-      } else if (env.defined(name)) {
-        const value = env.get(name, loc(exp));
+      } else if (env.defined(path)) {
+        const value = env.get(path, loc(exp));
         if (typeof value === "function") fn = value;
       }
     } else {
@@ -194,12 +224,12 @@ const evals: Record<
   FunctionDeclaration(exp, env, functions) {
     const name = evaluate(exp.id);
     const params = exp.params.map((param: AnyNode) => evaluate(param));
-    env.set(name, makeFunc(params, exp.body, env, functions), loc(exp));
+    env.set([name], makeFunc(params, exp.body, env, functions), loc(exp));
   },
 
   Identifier(exp, env) {
     if (env) {
-      return env.get(exp.name, loc(exp));
+      return env.get([exp.name], loc(exp));
     }
     return exp.name;
   },
@@ -219,9 +249,20 @@ const evals: Record<
   },
 
   LogicalExpression(exp, env, functions) {
+    // Short-circuit: `a || b` must not evaluate `b` when `a` is truthy, and
+    // `a && b` must not evaluate `b` when `a` is falsy. Previously both sides
+    // were evaluated eagerly, which broke the common `guard && action` idiom.
     const left = evaluate(exp.left, env, functions);
-    const right = evaluate(exp.right, env, functions);
-    return logicOps[exp.operator](left, right);
+    switch (exp.operator) {
+      case "||":
+        return left || evaluate(exp.right, env, functions);
+      case "&&":
+        return left && evaluate(exp.right, env, functions);
+      case "??":
+        return left ?? evaluate(exp.right, env, functions);
+      default:
+        throw new Error(`Unsupported logical operator: ${exp.operator}`);
+    }
   },
 
   MemberExpression(exp, env, functions) {
@@ -238,6 +279,9 @@ const evals: Record<
 
   ObjectExpression(exp, env, functions) {
     const result: Record<string, any> = {};
+    // Track own-key count so we can bound via checkLength without an O(N)
+    // Object.keys(result).length call on every iteration.
+    let ownCount = 0;
     for (const prop of exp.properties) {
       if (prop.type === "SpreadElement") {
         const spread = evaluate(prop.argument, env, functions);
@@ -246,8 +290,16 @@ const evals: Record<
         // keys manually and drop blocked keys so a spread can't set the
         // prototype of result or plant a booby-trapped own "constructor".
         if (spread != null && typeof spread === "object") {
-          for (const key of Object.keys(spread)) {
+          const keys = Object.keys(spread);
+          // Project before writing: `reduce(arr, (a,k) => ({...a,[k]:k}), {})`
+          // grows the accumulator by one key per step and would otherwise run
+          // until maxSteps exhausts, leaving a maxSteps-sized object behind.
+          env.runtime.checkLength(ownCount + keys.length);
+          for (const key of keys) {
             if (!BLOCKED_PROPS.has(key)) {
+              if (!Object.prototype.hasOwnProperty.call(result, key)) {
+                ownCount++;
+              }
               result[key] = (spread as Record<string, any>)[key];
             }
           }
@@ -270,6 +322,10 @@ const evals: Record<
         // object leaving the sandbox can't carry a booby-trapped "constructor"
         // into the caller's scope.
         assertSafeProperty(key);
+        if (!Object.prototype.hasOwnProperty.call(result, key)) {
+          env.runtime.checkLength(ownCount + 1);
+          ownCount++;
+        }
         result[key] = evaluate(prop.value, env, functions);
       }
     }
@@ -335,7 +391,7 @@ const evals: Record<
   VariableDeclarator(exp, env, functions) {
     const name = evaluate(exp.id);
     const value = exp.init ? evaluate(exp.init, env, functions) : undefined;
-    return env.def(name, value);
+    return env.def([name], value);
   },
 };
 
