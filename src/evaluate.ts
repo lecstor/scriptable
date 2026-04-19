@@ -24,15 +24,6 @@ function assertSafeProperty(prop: string): void {
   }
 }
 
-// Execution step counter — reset via resetStepCounter() before each run.
-let _steps = 0;
-let _maxSteps = 0;
-
-export function resetStepCounter(maxSteps: number): void {
-  _steps = 0;
-  _maxSteps = maxSteps;
-}
-
 function loc(exp: AnyNode) {
   return exp.loc!.start;
 }
@@ -263,9 +254,10 @@ const evals: Record<
 };
 
 function evaluate(exp: AnyNode, env?: any, functions?: any): any {
-  if (_maxSteps > 0 && ++_steps > _maxSteps) {
-    throw new Error("Execution limit exceeded");
-  }
+  // env is absent when we're resolving a static path (AssignmentExpression
+  // target, CallExpression callee, function/variable names, params). Those
+  // branches don't execute user code, so the counter only needs to run here.
+  if (env) env.runtime.step();
   if (evals[exp.type]) {
     return evals[exp.type](exp, env, functions);
   }

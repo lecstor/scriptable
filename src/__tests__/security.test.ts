@@ -291,6 +291,39 @@ describe("DoS: execution limits", () => {
 });
 
 // ==========================================================================
+// 8b. DoS — step counter isolation across runs
+// ==========================================================================
+
+describe("DoS: step counter per-run isolation", () => {
+  it("re-entrance does not leak budget into the outer run", () => {
+    // Caller-injected function that synchronously runs another interpreter.
+    // Previously the module-global counter was reset by the inner run,
+    // letting the outer run silently bypass its maxSteps.
+    const inner = runner({ maxSteps: 100_000 });
+    const outer = runner({ maxSteps: 5 });
+    expect(() =>
+      outer(
+        `
+          runInner("x = 1;");
+          a = 1; b = 2; c = 3; d = 4; e = 5; f = 6; g = 7; h = 8;
+        `,
+        { runInner: (code: string) => inner(code).env }
+      )
+    ).toThrow("Execution limit exceeded");
+  });
+
+  it("two runners with different limits do not share state", () => {
+    const tight = runner({ maxSteps: 5 });
+    const loose = runner({ maxSteps: 100_000 });
+    // loose completes first; tight should still trip on its own budget.
+    loose(`a = 1; b = 2; c = 3; d = 4; e = 5;`);
+    expect(() => tight(`a = 1; b = 2; c = 3;`)).toThrow(
+      "Execution limit exceeded"
+    );
+  });
+});
+
+// ==========================================================================
 // 9. Sandbox escape via builtin return values
 // ==========================================================================
 

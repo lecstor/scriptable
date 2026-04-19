@@ -59,13 +59,34 @@ export interface Loc {
   column: number;
 }
 
+// Per-run execution state. Shared across every scope in a single interpreter
+// run via Environment.runtime. Replaces the previous module-global counter,
+// so concurrent or re-entrant runs can't clobber each other's budgets.
+export class Runtime {
+  steps: number = 0;
+  maxSteps: number;
+
+  constructor(maxSteps: number = 0) {
+    this.maxSteps = maxSteps;
+  }
+
+  step(): void {
+    if (this.maxSteps === 0) return;
+    if (++this.steps > this.maxSteps) {
+      throw new Error("Execution limit exceeded");
+    }
+  }
+}
+
 export default class Environment {
   vars: Record<string, any>;
   parent: Environment | null;
+  runtime: Runtime;
 
-  constructor(parent?: Environment) {
+  constructor(parent?: Environment, runtime?: Runtime) {
     this.vars = Object.create(parent ? parent.vars : null);
     this.parent = parent || null;
+    this.runtime = parent ? parent.runtime : runtime ?? new Runtime();
   }
 
   extend(): Environment {

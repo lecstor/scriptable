@@ -1,8 +1,8 @@
 import * as acorn from "acorn";
-import evaluate, { resetStepCounter } from "./evaluate.js";
+import evaluate from "./evaluate.js";
 import builtinFuncs from "./builtin-functions.js";
 import type { FunctionMap } from "./builtin-functions.js";
-import Environment from "./environment.js";
+import Environment, { Runtime } from "./environment.js";
 
 function parse(code: string) {
   return acorn.parse(code, {
@@ -28,8 +28,7 @@ export default function runner({ functions = builtinFuncs, maxSteps = DEFAULT_MA
   return (code: string, env: Record<string, any> = {}, debug?: boolean): RunResult => {
     const ast = parse(code);
     debug && console.log(JSON.stringify(ast.body, null, 2));
-    resetStepCounter(maxSteps);
-    const globalEnv = new Environment();
+    const globalEnv = new Environment(undefined, new Runtime(maxSteps));
     Object.keys(env).forEach((key) => {
       globalEnv.def(key, env[key]);
     });
@@ -38,5 +37,5 @@ export default function runner({ functions = builtinFuncs, maxSteps = DEFAULT_MA
   };
 }
 
-export { Environment };
+export { Environment, Runtime };
 export type { FunctionMap };
