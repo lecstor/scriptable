@@ -428,6 +428,67 @@ describe("DoS: maxCodeSize", () => {
 });
 
 // ==========================================================================
+// 8e. Object literal cannot introduce blocked keys
+// ==========================================================================
+
+describe("object literal: blocked keys", () => {
+  it("rejects __proto__ as a static key (would set prototype of new object)", () => {
+    const code = `x = { "__proto__": { injected: "yes" } };`;
+    expect(() => run(code)).toThrow(
+      "Access to property '__proto__' is not allowed"
+    );
+  });
+
+  it("rejects __proto__ as an Identifier key", () => {
+    const code = `x = { __proto__: 1 };`;
+    expect(() => run(code)).toThrow(
+      "Access to property '__proto__' is not allowed"
+    );
+  });
+
+  it("rejects constructor as a literal key", () => {
+    const code = `x = { "constructor": "pwn" };`;
+    expect(() => run(code)).toThrow(
+      "Access to property 'constructor' is not allowed"
+    );
+  });
+
+  it("rejects prototype as a key", () => {
+    const code = `x = { prototype: 1 };`;
+    expect(() => run(code)).toThrow(
+      "Access to property 'prototype' is not allowed"
+    );
+  });
+
+  it("rejects computed key that evaluates to a blocked name", () => {
+    const code = `x = { ["con" + "structor"]: 1 };`;
+    expect(() => run(code)).toThrow(
+      "Access to property 'constructor' is not allowed"
+    );
+  });
+
+  it("evaluates computed Identifier keys as their value (bug fix)", () => {
+    const code = `k = "dynamic"; x = { [k]: 42 }; result = x.dynamic;`;
+    const { env } = run(code);
+    expect(env.result).toEqual(42);
+  });
+
+  it("spread source cannot introduce blocked keys into result", () => {
+    // Host passes an object with an own "constructor" key (e.g., by mistake).
+    // Spread should silently drop it rather than poison the user-created object.
+    const tainted = Object.create(null);
+    tainted.ok = "yes";
+    tainted.constructor = "evil";
+    const code = `x = { ...tainted }; ok = x.ok;`;
+    const { env } = run(code, { tainted });
+    expect(env.ok).toEqual("yes");
+    expect(Object.prototype.hasOwnProperty.call(env.x, "constructor")).toBe(
+      false
+    );
+  });
+});
+
+// ==========================================================================
 // 9. Sandbox escape via builtin return values
 // ==========================================================================
 

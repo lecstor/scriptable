@@ -193,11 +193,35 @@ const evals: Record<
     for (const prop of exp.properties) {
       if (prop.type === "SpreadElement") {
         const spread = evaluate(prop.argument, env, functions);
-        Object.assign(result, spread);
+        // Object.assign invokes setters, which includes Object.prototype's
+        // __proto__ setter when source has own __proto__. Copy own enumerable
+        // keys manually and drop blocked keys so a spread can't set the
+        // prototype of result or plant a booby-trapped own "constructor".
+        if (spread != null && typeof spread === "object") {
+          for (const key of Object.keys(spread)) {
+            if (!BLOCKED_PROPS.has(key)) {
+              result[key] = (spread as Record<string, any>)[key];
+            }
+          }
+        }
       } else {
-        // Property — key can be Identifier or Literal
-        const key =
-          prop.key.type === "Identifier" ? prop.key.name : prop.key.value;
+        // Property — non-computed keys are Identifier (shorthand/name) or
+        // Literal; computed keys (`{[expr]: v}`) require evaluating the
+        // expression. The previous code ignored `computed`, so `{[k]: v}`
+        // silently used the identifier NAME "k" instead of its value.
+        let key: string;
+        if (prop.computed) {
+          key = String(evaluate(prop.key, env, functions));
+        } else if (prop.key.type === "Identifier") {
+          key = prop.key.name;
+        } else {
+          key = String(prop.key.value);
+        }
+        // Block "__proto__", "constructor", etc. as keys so user code can't
+        // set the prototype of a fresh object via literal syntax, and so an
+        // object leaving the sandbox can't carry a booby-trapped "constructor"
+        // into the caller's scope.
+        assertSafeProperty(key);
         result[key] = evaluate(prop.value, env, functions);
       }
     }
