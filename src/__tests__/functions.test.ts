@@ -26,6 +26,29 @@ describe("function", () => {
     expect(env.baz).toEqual(10);
   });
 
+  it("defines a function expression assigned to a variable", () => {
+    const code = `
+      foo = function (bar) { return bar + 3; }
+      baz = foo(7);
+      `;
+    const vars = {};
+    const { env } = run(code, vars);
+    expect(env.foo).toBeDefined();
+    expect(env.baz).toEqual(10);
+  });
+
+  it("can call a builtin with a function expression as arg", () => {
+    const code = `
+      nprices = map(prices, function (price) { return price * 2; });
+    `;
+    const vars = { prices: [11, 22, 33] };
+    const { env } = run(code, vars);
+    expect(env).toEqual({
+      prices: [11, 22, 33],
+      nprices: [22, 44, 66],
+    });
+  });
+
   it("has access to env", () => {
     const code = `
       greet = (name) => "hello " + name;

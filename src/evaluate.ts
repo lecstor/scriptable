@@ -96,6 +96,11 @@ const evals: Record<
     return makeFunc(params, exp.body, env, functions);
   },
 
+  FunctionExpression(exp, env, functions) {
+    const params = exp.params.map((param: AnyNode) => evaluate(param));
+    return makeFunc(params, exp.body, env, functions);
+  },
+
   ArrayExpression(exp, env, functions) {
     const result: any[] = [];
     for (const el of exp.elements) {
