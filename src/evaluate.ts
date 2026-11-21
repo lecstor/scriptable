@@ -23,6 +23,18 @@ function assertSafeProperty(prop: string): void {
   }
 }
 
+function toPropertyKey(value: unknown): string {
+  if (
+    value !== null &&
+    (typeof value === "object" ||
+      typeof value === "function" ||
+      typeof value === "symbol")
+  ) {
+    throw new Error("Property key must be a primitive value");
+  }
+  return String(value);
+}
+
 // Sentinel thrown by ReturnStatement and caught at the nearest function
 // boundary (makeFunc). Without this, a `return` nested inside an `if` (or
 // any non-ReturnStatement node) would be evaluated but the enclosing
@@ -55,7 +67,7 @@ function evalAsPath(
   if (exp.type === "MemberExpression") {
     const objParts = evalAsPath(exp.object, env, functions);
     const propStr = exp.computed
-      ? String(evaluate(exp.property, env, functions))
+      ? toPropertyKey(evaluate(exp.property, env, functions))
       : String((exp.property as AnyNode).name);
     assertSafeProperty(propStr);
     return [...objParts, propStr];
@@ -273,9 +285,9 @@ const evals: Record<
   MemberExpression(exp, env, functions) {
     const obj = evaluate(exp.object, env, functions);
     if (exp.computed) {
-      const prop = evaluate(exp.property, env, functions);
-      assertSafeProperty(String(prop));
-      return obj[prop];
+      const key = toPropertyKey(evaluate(exp.property, env, functions));
+      assertSafeProperty(key);
+      return obj[key];
     }
     const prop = evaluate(exp.property);
     assertSafeProperty(prop);
@@ -316,7 +328,7 @@ const evals: Record<
         // silently used the identifier NAME "k" instead of its value.
         let key: string;
         if (prop.computed) {
-          key = String(evaluate(prop.key, env, functions));
+          key = toPropertyKey(evaluate(prop.key, env, functions));
         } else if (prop.key.type === "Identifier") {
           key = prop.key.name;
         } else {

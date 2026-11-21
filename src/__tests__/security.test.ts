@@ -60,6 +60,63 @@ describe("sandbox escape: prototype chain", () => {
     `;
     expect(() => run(code)).toThrow("Access to property 'constructor' is not allowed");
   });
+
+  it("rejects computed read with stateful toString object key", () => {
+    const code = `
+      calls = 0;
+      key = {
+        toString: () => {
+          calls = calls + 1;
+          return calls == 1 ? "safe" : "constructor";
+        }
+      };
+      a = { safe: 1 };
+      a[key];
+    `;
+    expect(() => run(code)).toThrow("Property key must be a primitive value");
+  });
+
+  it("rejects computed assignment with stateful toString object key", () => {
+    const code = `
+      calls = 0;
+      key = {
+        toString: () => {
+          calls = calls + 1;
+          return calls == 1 ? "safe" : "__proto__";
+        }
+      };
+      a = {};
+      a[key] = 1;
+    `;
+    expect(() => run(code)).toThrow("Property key must be a primitive value");
+  });
+
+  it("rejects object, function, and symbol computed property keys", () => {
+    const constObjCode = `
+      key = { toString: () => "foo" };
+      a = { foo: 1 };
+      a[key];
+    `;
+    expect(() => run(constObjCode)).toThrow("Property key must be a primitive value");
+
+    const fnKeyCode = `
+      key = () => "foo";
+      a = { foo: 1 };
+      a[key];
+    `;
+    expect(() => run(fnKeyCode)).toThrow("Property key must be a primitive value");
+
+    const objLiteralCode = `
+      key = { toString: () => "foo" };
+      x = { [key]: 1 };
+    `;
+    expect(() => run(objLiteralCode)).toThrow("Property key must be a primitive value");
+
+    const sym = Symbol("foo");
+    expect(() => run(`a[k]`, { a: { [sym]: 1 }, k: sym })).toThrow(
+      "Property key must be a primitive value"
+    );
+  });
 });
 
 // ==========================================================================
@@ -786,5 +843,25 @@ describe("safe property access still works", () => {
     const code = `a = [10, 20, 30]; a[1]`;
     const { result } = run(code);
     expect(result).toEqual(20);
+  });
+
+  it("computed property access with primitive keys (string, number, boolean, null, undefined)", () => {
+    const code = `
+      labels = { ok: "yes", 2: "two", true: "t", null: "n" };
+      item = {};
+      rStr = labels["ok"];
+      rNum = labels[2];
+      rBool = labels[true];
+      rNull = labels[null];
+      rUndef = labels[item.status];
+      rUndefPresent = ({ undefined: "u" })[item.status];
+    `;
+    const { env } = run(code);
+    expect(env.rStr).toEqual("yes");
+    expect(env.rNum).toEqual("two");
+    expect(env.rBool).toEqual("t");
+    expect(env.rNull).toEqual("n");
+    expect(env.rUndef).toBeUndefined();
+    expect(env.rUndefPresent).toEqual("u");
   });
 });
