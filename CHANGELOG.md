@@ -1,5 +1,11 @@
 # scriptable
 
+## 0.2.3
+
+### Patch Changes
+
+- 21e6053: Convert computed property keys once and reject non-primitive (object, function, symbol) keys across member reads, assignments, and computed object-literal properties.
+
 ## 0.2.2
 
 ### Patch Changes
